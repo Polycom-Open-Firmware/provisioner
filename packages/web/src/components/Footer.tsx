@@ -13,11 +13,13 @@ export function Footer() {
 
   const isAction = step.type === "action";
   const actionErrored = isAction && !!error && !running && !busy;
-  // Native USB/serial use in-step pickers, not the footer button.
+  // The OS chooser and the native USB/serial pickers advance themselves, so the
+  // footer button is hidden on those steps.
   const hidePrimary =
-    isTauri() &&
-    step.type === "confirm" &&
-    (step.gesture === "connect-serial" || step.gesture === "connect-usb");
+    step.id === "choose-os" ||
+    (isTauri() &&
+      step.type === "confirm" &&
+      (step.gesture === "connect-serial" || step.gesture === "connect-usb"));
   const prev = stepIndex > 0 ? flow.steps[stepIndex - 1] : null;
   const canBack =
     !running && !busy && !isAction && step.type !== "done" && (!prev || prev.type !== "action");

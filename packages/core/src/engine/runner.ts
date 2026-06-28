@@ -18,7 +18,7 @@ export interface RunnerOptions {
 export class WizardRunner {
   readonly events = new Emitter();
   private readonly backend: Backend;
-  private readonly artifacts: Artifacts;
+  private artifacts: Artifacts;
   private readonly fb: Fastboot;
   private readonly uboot: UBootConsole;
 
@@ -63,6 +63,11 @@ export class WizardRunner {
   retry(): void {
     const step = this.currentStep;
     if (step && step.type === "action") void this.enter(this.index);
+  }
+
+  /** Swap the artifact source (the OS chooser picks which OS build to flash). */
+  useArtifacts(a: Artifacts): void {
+    this.artifacts = a;
   }
 
   /** Confirm the current confirm-step (same as next, named for the UI's intent). */

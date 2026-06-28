@@ -107,6 +107,17 @@ export function osInstallSteps(idPrefix = "os", connectBody?: string): Step[] {
   ];
 }
 
+/** OS-build chooser — the UI renders the catalog for the step with id "choose-os". */
+export function chooseOsStep(): Step {
+  return {
+    id: "choose-os",
+    type: "confirm",
+    rail: "Choose OS",
+    title: "Choose an OS",
+    body: "Pick which OS build to install. The newest releases are listed first.",
+  };
+}
+
 export function reinstallLinuxFlow(): Flow {
   return {
     id: "reinstall-linux",
@@ -122,6 +133,7 @@ export function reinstallLinuxFlow(): Flow {
           "This installs or updates Linux on a device that's already unlocked. When you see " +
           "the submarine logo, touch the screen with four fingers to enter fastboot, then press Next.",
       },
+      chooseOsStep(),
       ...osInstallSteps("os"),
     ],
   };

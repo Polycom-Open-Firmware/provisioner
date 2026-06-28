@@ -19,6 +19,7 @@ import {
 import { webBackend } from "@/backend";
 import { isTauri, nativeBackend } from "@/native/backend";
 import { HttpArtifacts } from "@/artifacts";
+import { artifactsFor, type OsBuild } from "@/os-catalog";
 
 export type Phase = "pick-device" | "pick-flow" | "in-flow";
 export interface ConsoleLine {
@@ -51,6 +52,8 @@ export interface WizardApi extends WizardState {
   connectSerialPort: (path: string) => Promise<void>;
   /** Native only: open a specific USB device, then advance. */
   connectUsbDevice: (dev: { vendorId: number; productId: number; serial?: string }) => Promise<void>;
+  /** Pick which OS build to flash; swaps the artifact source, then advances. */
+  chooseOs: (build: OsBuild) => void;
 }
 
 const initial: WizardState = {
@@ -149,6 +152,11 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const chooseOs = (build: OsBuild) => {
+    runner.useArtifacts(artifactsFor(build));
+    runner.confirm();
+  };
+
   const restart = () => setState({ ...initial });
 
   const back = () => {
@@ -204,6 +212,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     restart,
     connectSerialPort,
     connectUsbDevice,
+    chooseOs,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
