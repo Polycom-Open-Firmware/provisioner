@@ -5,6 +5,10 @@ import { useWizard } from "@/lib/wizard";
 import { Badge } from "@/components/ui/badge";
 import { webSupport } from "@/backend";
 
+// Device id -> bundled product image (web asset in public/). Kept in the UI, not
+// core, since asset URLs are a web-only concern.
+const DEVICE_IMAGES: Record<string, string> = { tc8: "/poly-tc8.png" };
+
 function UnsupportedBanner({ sup }: { sup: ReturnType<typeof webSupport> }) {
   const missing = [
     !sup.usb && "WebUSB",
@@ -42,24 +46,34 @@ export function DevicePicker() {
       {unsupported && <UnsupportedBanner sup={sup} />}
 
       <div className="grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
-        {devices.map((d) => (
-          <button
-            key={d.id}
-            onClick={() => pickDevice(d)}
-            className="flex flex-col items-start gap-3 rounded-[12px] border border-border bg-background p-5 text-left transition hover:border-primary"
-          >
-            <div className="flex h-24 w-full items-center justify-center rounded-[8px] bg-rail font-mono text-xs text-muted">
-              device photo
-            </div>
-            <div className="text-[15px] font-semibold text-foreground">{d.name}</div>
-          </button>
-        ))}
+        {devices.map((d) => {
+          const img = DEVICE_IMAGES[d.id];
+          return (
+            <button
+              key={d.id}
+              onClick={() => pickDevice(d)}
+              className="flex flex-col items-center gap-3 rounded-[12px] p-5 text-center transition hover:bg-rail"
+            >
+              <div className="flex h-28 w-full items-center justify-center">
+                {img ? (
+                  <img src={img} alt={d.name} className="max-h-28 max-w-full object-contain" />
+                ) : (
+                  <span className="font-mono text-xs text-muted">{d.name}</span>
+                )}
+              </div>
+              <div className="text-[15px] font-semibold text-foreground">{d.name}</div>
+            </button>
+          );
+        })}
 
-        <div className="flex flex-col items-start gap-3 rounded-[12px] border border-dashed border-border bg-background p-5 opacity-60">
-          <div className="flex h-24 w-full items-center justify-center rounded-[8px] bg-rail font-mono text-xs text-muted">
-            more soon
+        <div className="flex flex-col items-center gap-3 rounded-[12px] p-5 text-center opacity-60">
+          <div className="flex h-28 w-full items-center justify-center">
+            <img src="/poly-c60.png" alt="Polycom Trio C60" className="max-h-28 max-w-full object-contain" />
           </div>
-          <Badge>Soon</Badge>
+          <div className="flex items-center gap-2">
+            <span className="text-[15px] font-semibold text-foreground">Polycom Trio C60</span>
+            <Badge>Soon</Badge>
+          </div>
         </div>
       </div>
     </div>
