@@ -12,9 +12,16 @@ export function Slideshow({ images, className }: { images: string[]; className?:
   const go = (d: number) => setI((p) => Math.max(0, Math.min(n - 1, p + d)));
 
   return (
-    <div className={cn("select-none", className)}>
-      <div className="relative overflow-hidden rounded-[12px] border border-border bg-rail">
-        <img src={images[i]} alt={`Step ${i + 1} of ${n}`} className="aspect-[4/3] w-full object-cover" />
+    <div className={cn("flex select-none flex-col items-center", className)}>
+      <div className="relative overflow-hidden rounded-[12px] border border-border">
+        {/* Bound to the app window's content height (it tracks the window's own
+            min(82vh,760px), minus chrome+copy) so the step fits without scrolling;
+            the frame shrinks to the image, which keeps its own aspect ratio. */}
+        <img
+          src={images[i]}
+          alt={`Step ${i + 1} of ${n}`}
+          className="block max-h-[calc(min(82vh,760px)_-_360px)] max-w-[460px]"
+        />
         {i > 0 && (
           <button
             onClick={() => go(-1)}

@@ -62,9 +62,7 @@ export function unlockFlow(): Flow {
         type: "info",
         rail: "Open it up",
         title: "Open the device",
-        body:
-          "Open the housing to reach the serial header inside. Step through the photos with " +
-          "the arrows, then press Next.",
+        body: "Open the housing to reach the serial header inside.",
         gallery: [
           "/disassembly/01.jpg",
           "/disassembly/02.jpg",
