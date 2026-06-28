@@ -110,14 +110,14 @@ export function osInstallSteps(idPrefix = "os", connectBody?: string): Step[] {
 export function reinstallLinuxFlow(): Flow {
   return {
     id: "reinstall-linux",
-    title: "Reinstall Linux",
+    title: "Install or Update OS",
     summary: "Flash a fresh Debian image onto an already-unlocked device.",
     steps: [
       {
         id: "intro",
         type: "info",
         rail: "Intro",
-        title: "Reinstall Linux",
+        title: "Install or Update OS",
         body:
           "This writes a fresh OS image to an already-unlocked device. " +
           "Put the device into fastboot with the four-finger gesture at the boot selector.",

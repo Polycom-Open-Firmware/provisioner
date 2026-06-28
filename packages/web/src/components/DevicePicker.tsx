@@ -36,9 +36,7 @@ export function DevicePicker() {
           Open Polycom
         </div>
         <h1 className="mt-2 text-[27px] font-bold tracking-[-0.02em] text-foreground">Pick your device</h1>
-        <p className="mt-1 text-[15px] text-body">
-          Unlock it and install Linux over USB. Nothing leaves your machine.
-        </p>
+        <p className="mt-1 text-[15px] text-body">Unlock it and install Linux over USB.</p>
       </div>
 
       {unsupported && <UnsupportedBanner sup={sup} />}
@@ -53,12 +51,7 @@ export function DevicePicker() {
             <div className="flex h-24 w-full items-center justify-center rounded-[8px] bg-rail font-mono text-xs text-muted">
               device photo
             </div>
-            <div>
-              <div className="text-[15px] font-semibold text-foreground">{d.name}</div>
-              <div className="text-xs text-muted">
-                {d.flows.filter((f) => !f.soon).length} guided flows
-              </div>
-            </div>
+            <div className="text-[15px] font-semibold text-foreground">{d.name}</div>
           </button>
         ))}
 

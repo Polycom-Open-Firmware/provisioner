@@ -45,7 +45,7 @@ export function unlockFlow(): Flow {
 
   return {
     id: "unlock",
-    title: "Unlock",
+    title: "Unlock and Install",
     summary: "Unlock a fresh device and install Linux — one-time, needs serial.",
     steps: [
       {
@@ -55,8 +55,7 @@ export function unlockFlow(): Flow {
         title: "Unlock this device",
         body:
           "A one-time setup that installs the open bootloader and then Linux, so the " +
-          "device is ready to use. You'll need the serial adapter and a USB cable. " +
-          "Nothing leaves your machine.",
+          "device is ready to use. You'll need the serial adapter and a USB cable.",
       },
       {
         id: "connect-serial",
