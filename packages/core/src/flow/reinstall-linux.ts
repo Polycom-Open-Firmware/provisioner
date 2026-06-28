@@ -120,8 +120,8 @@ export function reinstallLinuxFlow(): Flow {
         title: "Put the device into fastboot",
         icon: "gesture",
         body:
-          "This installs or updates Linux on a device that's already unlocked. On the boot " +
-          "selector screen, touch it with four fingers to enter fastboot, then press Next.",
+          "This installs or updates Linux on a device that's already unlocked. When you see " +
+          "the submarine logo, touch the screen with four fingers to enter fastboot, then press Next.",
       },
       ...osInstallSteps("os"),
     ],
