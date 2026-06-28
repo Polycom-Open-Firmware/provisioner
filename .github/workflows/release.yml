@@ -1,0 +1,73 @@
+name: Release
+
+# Tag a version (e.g. `git tag v0.1.0 && git push --tags`) to build the web SPA
+# and the native desktop installers (Windows / macOS / Linux) and attach them all
+# to a GitHub Release. Public repo -> all runners (incl. macOS) are free.
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  native:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: "--target universal-apple-darwin"
+          - platform: ubuntu-22.04
+            args: ""
+          - platform: windows-latest
+            args: ""
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - name: Install Linux build deps
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libudev-dev
+      - run: npm ci
+      - name: Build web SPA (Tauri embeds it)
+        run: npm run build -w @provisioner/web
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: packages/native
+          tagName: ${{ github.ref_name }}
+          releaseName: "Open Polycom Provisioner ${{ github.ref_name }}"
+          releaseBody: "Web SPA + native desktop builds (Windows / macOS / Linux). The web build is attached as provisioner-web-*.zip; serve it over https/localhost in Chrome or Edge."
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+
+  web:
+    needs: native
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @provisioner/web
+      - name: Zip the web SPA
+        run: cd packages/web/dist && zip -r "$GITHUB_WORKSPACE/provisioner-web-${{ github.ref_name }}.zip" .
+      - name: Attach web SPA to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.ref_name }}" "provisioner-web-${{ github.ref_name }}.zip" --clobber

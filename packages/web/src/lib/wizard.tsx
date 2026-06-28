@@ -17,6 +17,7 @@ import {
   type EngineEvent,
 } from "@provisioner/core";
 import { webBackend } from "@/backend";
+import { isTauri, nativeBackend } from "@/native/backend";
 import { HttpArtifacts } from "@/artifacts";
 
 export type Phase = "pick-device" | "pick-flow" | "in-flow";
@@ -92,7 +93,8 @@ export function useWizard(): WizardApi {
 export function WizardProvider({ children }: { children: React.ReactNode }) {
   const runnerRef = React.useRef<WizardRunner | null>(null);
   if (!runnerRef.current) {
-    runnerRef.current = new WizardRunner({ backend: webBackend(), artifacts: new HttpArtifacts() });
+    const backend = isTauri() ? nativeBackend() : webBackend();
+    runnerRef.current = new WizardRunner({ backend, artifacts: new HttpArtifacts() });
   }
   const runner = runnerRef.current;
 
