@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "types": ["w3c-web-usb", "w3c-web-serial"],
+    "paths": {
+      "@provisioner/core": ["../core/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

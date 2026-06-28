@@ -1,0 +1,17 @@
+{
+  "name": "provisioner",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Device provisioning wizard — shared core, web + native (Tauri) flavors.",
+  "workspaces": [
+    "packages/core",
+    "packages/web",
+    "packages/native"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+*.log
+
+# Tauri / Rust
+packages/native/src-tauri/target/
+**/target/
+
+# Artifacts (firmware images live outside the repo / are fetched)
+artifacts/*.img
+artifacts/*.simg
+artifacts/*.bin
+*.zip
+package-lock.json
