@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Slideshow } from "./Slideshow";
 import { NativeSerialPicker } from "./NativeSerialPicker";
 import { NativeUsbPicker } from "./NativeUsbPicker";
+import { ConfigForm } from "./ConfigForm";
 import { isTauri } from "@/native/backend";
 import type { Gesture } from "@provisioner/core";
 
@@ -68,6 +69,8 @@ export function StepContent() {
 
       <h1 className="mt-2 text-[27px] font-bold tracking-[-0.02em] text-foreground">{step.title}</h1>
       {step.body && <p className="mt-3 text-[15px] leading-relaxed text-body">{step.body}</p>}
+
+      {step.id === "settings" && <ConfigForm />}
 
       {step.gallery && step.gallery.length > 0 && (
         <Slideshow images={step.gallery} className="mt-6" />
