@@ -17,23 +17,34 @@ function kindLabel(t: string): string {
   return t === "action" ? "Installing" : t === "confirm" ? "Action needed" : t === "done" ? "Done" : "Step";
 }
 
+// The serial cable, end to end: TC8 connector -> level shifter -> USB-to-serial.
+const SERIAL_PARTS = [
+  { src: "/serial/tc8-end.jpg", label: "TC8 connector" },
+  { src: "/serial/level-shifter.jpg", label: "Level shifter" },
+  { src: "/serial/usb-to-serial.jpg", label: "USB-to-serial" },
+];
+
 function GestureHint({ gesture }: { gesture: Gesture }) {
   if (gesture === "connect-serial")
     return (
-      <div className="mt-6 grid grid-cols-2 gap-3">
-        <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-border bg-rail font-mono text-xs text-muted">
-          serial header photo
-        </div>
-        <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-border bg-rail font-mono text-xs text-muted">
-          pinout diagram
-        </div>
+      <div className="mt-6 grid grid-cols-3 gap-3">
+        {SERIAL_PARTS.map((p) => (
+          <figure key={p.src} className="m-0">
+            <div className="flex h-40 items-center justify-center overflow-hidden rounded-[8px] border border-border bg-rail">
+              <img src={p.src} alt={p.label} className="max-h-40 max-w-full object-contain" />
+            </div>
+            <figcaption className="mt-1.5 text-center font-mono text-[11px] text-muted">{p.label}</figcaption>
+          </figure>
+        ))}
       </div>
     );
   if (gesture === "connect-usb")
     return (
-      <div className="mt-6 flex h-24 items-center justify-center rounded-lg border border-dashed border-border bg-rail font-mono text-xs text-muted">
-        USB cabling diagram
-      </div>
+      <img
+        src="/usb-otg.jpg"
+        alt="USB-C cable connected to the device"
+        className="mx-auto mt-6 block max-h-[calc(min(82vh,760px)_-_360px)] w-auto rounded-[8px] border border-border object-contain"
+      />
     );
   return null;
 }
