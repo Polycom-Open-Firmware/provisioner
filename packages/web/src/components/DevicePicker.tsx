@@ -6,8 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { webSupport } from "@/backend";
 
 // Device id -> bundled product image (web asset in public/). Kept in the UI, not
-// core, since asset URLs are a web-only concern.
-const DEVICE_IMAGES: Record<string, string> = { tc8: "/poly-tc8.png" };
+// core, since asset URLs are a web-only concern. `scale` matches differently-framed
+// product shots to each other (TC8's is tighter, so shrink it to ~match the C60).
+const DEVICE_IMAGES: Record<string, { src: string; scale?: string }> = {
+  tc8: { src: "/poly-tc8.png", scale: "scale-[0.8]" },
+};
 
 function UnsupportedBanner({ sup }: { sup: ReturnType<typeof webSupport> }) {
   const missing = [
@@ -56,7 +59,11 @@ export function DevicePicker() {
             >
               <div className="flex h-28 w-full items-center justify-center">
                 {img ? (
-                  <img src={img} alt={d.name} className="max-h-28 max-w-full object-contain" />
+                  <img
+                    src={img.src}
+                    alt={d.name}
+                    className={`max-h-28 max-w-full object-contain ${img.scale ?? ""}`}
+                  />
                 ) : (
                   <span className="font-mono text-xs text-muted">{d.name}</span>
                 )}
