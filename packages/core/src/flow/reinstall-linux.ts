@@ -81,7 +81,7 @@ export function osInstallSteps(idPrefix = "os", connectBody?: string): Step[] {
     {
       id: `${idPrefix}-connect-usb`,
       type: "confirm",
-      rail: "USB",
+      rail: "Connect USB",
       title: "Connect over USB",
       body:
         connectBody ??
@@ -92,7 +92,7 @@ export function osInstallSteps(idPrefix = "os", connectBody?: string): Step[] {
     {
       id: `${idPrefix}-flash`,
       type: "action",
-      rail: "Install",
+      rail: "Install Linux",
       title: "Installing Debian",
       body: "Flashing the boot images and the root filesystem. This takes a few minutes.",
       run: runFlash,
@@ -116,7 +116,7 @@ export function reinstallLinuxFlow(): Flow {
       {
         id: "intro",
         type: "info",
-        rail: "Intro",
+        rail: "Enter fastboot",
         title: "Put the device into fastboot",
         body:
           "This installs or updates Linux on a device that's already unlocked. When you see " +

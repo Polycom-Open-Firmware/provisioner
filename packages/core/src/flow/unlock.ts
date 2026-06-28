@@ -51,7 +51,7 @@ export function unlockFlow(): Flow {
       {
         id: "intro",
         type: "info",
-        rail: "Intro",
+        rail: "Overview",
         title: "Unlock this device",
         body:
           "A one-time setup that installs the open bootloader and then Linux, so the " +
@@ -60,7 +60,7 @@ export function unlockFlow(): Flow {
       {
         id: "disassembly",
         type: "info",
-        rail: "Open it up",
+        rail: "Open the case",
         title: "Open the device",
         body: "Open the housing to reach the serial header inside.",
         gallery: [
@@ -77,7 +77,7 @@ export function unlockFlow(): Flow {
       {
         id: "connect-serial",
         type: "confirm",
-        rail: "Serial",
+        rail: "Connect serial",
         title: "Connect the serial adapter",
         body:
           "Plug the serial adapter into the device's header and into this computer, and " +
@@ -88,7 +88,7 @@ export function unlockFlow(): Flow {
       {
         id: "prep",
         type: "action",
-        rail: "Prepare",
+        rail: "Prepare device",
         title: "Catching the bootloader",
         body: "Power-cycle the device now so we can interrupt its boot countdown.",
         run: async (ctx) => {
@@ -115,7 +115,7 @@ export function unlockFlow(): Flow {
       {
         id: "connect-usb",
         type: "confirm",
-        rail: "Fastboot",
+        rail: "Connect USB",
         title: "Connect over USB",
         body:
           "The device is now in fastboot. Connect it to this computer over USB, then press " +
@@ -126,7 +126,7 @@ export function unlockFlow(): Flow {
       {
         id: "flash-stage2",
         type: "action",
-        rail: "Flash",
+        rail: "Flash bootloader",
         title: "Installing the bootloader",
         body: "Transferring the second-stage bootloader to the device.",
         run: async (ctx) => {
@@ -145,7 +145,7 @@ export function unlockFlow(): Flow {
       {
         id: "relocate",
         type: "action",
-        rail: "Persist",
+        rail: "Finalize bootloader",
         title: "Finalizing",
         body: "Moving the bootloader into protected storage and enabling chainload.",
         run: async (ctx) => {
@@ -180,7 +180,7 @@ export function unlockFlow(): Flow {
       {
         id: "trap",
         type: "action",
-        rail: "Trap",
+        rail: "Reboot to fastboot",
         title: "Trapping the bootloader in fastboot",
         body:
           "Rebooting into the new bootloader and catching it before it can boot, so " +
