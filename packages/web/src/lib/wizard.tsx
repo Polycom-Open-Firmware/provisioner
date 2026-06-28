@@ -44,6 +44,7 @@ export interface WizardApi extends WizardState {
   pickFlow: (f: Flow) => void;
   primary: () => void | Promise<void>;
   back: () => void;
+  retry: () => void;
   restart: () => void;
 }
 
@@ -116,6 +117,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     runner.start(f);
   };
 
+  const retry = () => runner.retry();
+
   const restart = () => setState({ ...initial });
 
   const back = () => {
@@ -167,6 +170,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     pickFlow,
     primary,
     back,
+    retry,
     restart,
   };
 

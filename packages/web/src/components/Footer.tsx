@@ -6,11 +6,12 @@ import { useWizard } from "@/lib/wizard";
 import { Button } from "@/components/ui/button";
 
 export function Footer() {
-  const { currentStep, stepIndex, flow, running, busy, primary, back } = useWizard();
+  const { currentStep, stepIndex, flow, running, busy, error, primary, back, retry } = useWizard();
   const step = currentStep;
   if (!step || !flow) return null;
 
   const isAction = step.type === "action";
+  const actionErrored = isAction && !!error && !running && !busy;
   const prev = stepIndex > 0 ? flow.steps[stepIndex - 1] : null;
   const canBack =
     !running && !busy && !isAction && step.type !== "done" && (!prev || prev.type !== "action");
@@ -34,10 +35,16 @@ export function Footer() {
         <Button variant="ghost" onClick={back} disabled={!canBack}>
           Back
         </Button>
-        <Button onClick={primary} disabled={primaryDisabled}>
-          {(running || busy) && <Loader2 className="h-4 w-4 animate-spin" />}
-          {label}
-        </Button>
+        {actionErrored ? (
+          <Button variant="outline" onClick={retry}>
+            Retry
+          </Button>
+        ) : (
+          <Button onClick={primary} disabled={primaryDisabled}>
+            {(running || busy) && <Loader2 className="h-4 w-4 animate-spin" />}
+            {label}
+          </Button>
+        )}
       </div>
     </div>
   );

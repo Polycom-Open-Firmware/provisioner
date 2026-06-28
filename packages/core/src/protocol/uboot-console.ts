@@ -56,8 +56,12 @@ export class UBootConsole {
    * Spam bare CRs until the stock U-Boot '=>' prompt answers. The operator is
    * told to power-cycle the unit so the boot countdown can be interrupted.
    */
-  async catchPrompt(log: LogCb = () => {}, tries = 400): Promise<boolean> {
-    log("catching U-Boot prompt -- power-cycle the unit now if it's off...");
+  async catchPrompt(
+    log: LogCb = () => {},
+    tries = 400,
+    message = "catching U-Boot prompt -- power-cycle the unit now if it's off...",
+  ): Promise<boolean> {
+    log(message);
     for (let i = 0; i < tries; i++) {
       await this.serial.send(""); // bare CR
       const out = await this.serial.readUntil(PROMPT, 250);

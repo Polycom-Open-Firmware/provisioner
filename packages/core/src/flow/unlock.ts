@@ -5,6 +5,7 @@
 // geometry, re-expressed as wizard steps that share a per-flow `state` object.
 import { sleep } from "../transport/transport";
 import type { Flow, FlowContext } from "../engine/types";
+import { osInstallSteps } from "./reinstall-linux";
 
 // --- geometry (option-A layout, identical to tc8_enroll.py / enroll.js) -------
 const BOOTB_LBA = 0x20000; // boot_b start (disposable transfer slot, user area)
@@ -45,7 +46,7 @@ export function unlockFlow(): Flow {
   return {
     id: "unlock",
     title: "Unlock",
-    summary: "Install the open bootloader on a fresh device (one-time, needs serial).",
+    summary: "Unlock a fresh device and install Linux — one-time, needs serial.",
     steps: [
       {
         id: "intro",
@@ -53,8 +54,9 @@ export function unlockFlow(): Flow {
         rail: "Intro",
         title: "Unlock this device",
         body:
-          "A one-time setup that installs the open second-stage bootloader. " +
-          "You'll need the serial adapter and a USB cable. Nothing leaves your machine.",
+          "A one-time setup that installs the open bootloader and then Linux, so the " +
+          "device is ready to use. You'll need the serial adapter and a USB cable. " +
+          "Nothing leaves your machine.",
       },
       {
         id: "connect-serial",
@@ -95,9 +97,9 @@ export function unlockFlow(): Flow {
       {
         id: "connect-usb",
         type: "confirm",
-        rail: "USB",
+        rail: "Fastboot",
         title: "Connect over USB",
-        body: "The device is now in fastboot. Pick it from the browser's device list.",
+        body: "The device is now in stock fastboot. Pick it from the browser's device list.",
         confirmLabel: "Device connected",
         gesture: "connect-usb",
       },
@@ -152,21 +154,47 @@ export function unlockFlow(): Flow {
           ctx.log("installing chainload bootcmd + saveenv");
           await ctx.uboot.cmd("setenv bootcmd '" + BOOTCMD + "'");
           await ctx.uboot.cmd("saveenv");
-          ctx.log("rebooting into stage-2...");
-          await ctx.uboot.serial.send("reset");
-          const banner = await ctx.uboot.waitFor("U-Boot 2024.04", 20000);
-          if (!banner.includes("U-Boot 2024.04"))
-            ctx.log("WARN: did not see the stage-2 banner within 20 s; check serial.");
-          else ctx.log("SUCCESS: stage-2 came up. Unit will land in fastboot (no OS yet).");
+          ctx.log("bootloader installed + chainload persisted.");
         },
       },
       {
-        id: "done",
-        type: "done",
-        rail: "Done",
-        title: "Device unlocked",
-        body: "The open bootloader is installed. Use “Reinstall Linux” to load an OS.",
+        id: "trap",
+        type: "action",
+        rail: "Trap",
+        title: "Trapping the bootloader in fastboot",
+        body:
+          "Rebooting into the new bootloader and catching it before it can boot, so " +
+          "the device never lands in the old, broken stock OS.",
+        run: async (ctx) => {
+          // Reboot. Stock stage-1 chainloads stage-2 — we must LET that happen, then
+          // interrupt stage-2's 3 s autoboot before it runs `boota`: on a stock unit
+          // boota would boot the leftover Android straight into a scary recovery
+          // loop (bad OOBE). So wait for the SECOND (stage-2) banner, then catch its
+          // prompt and drop it into fastboot.
+          ctx.log("rebooting into the second-stage bootloader...");
+          await ctx.uboot.serial.send("reset");
+          const banner = await ctx.uboot.waitFor("U-Boot 2024.04", 25000);
+          if (!banner.includes("U-Boot 2024.04"))
+            throw new Error("did not see the second-stage bootloader within 25 s — check serial and retry.");
+          ctx.log("second-stage up — trapping it before it boots an OS...");
+          const caught = await ctx.uboot.catchPrompt(
+            ctx.log,
+            400,
+            "interrupting the second-stage autoboot (3 s window)...",
+          );
+          if (!caught)
+            throw new Error("could not catch the second-stage prompt in time (it may have booted) — power-cycle and retry.");
+          ctx.log("entering fastboot (fastboot usb 0)...");
+          await ctx.uboot.serial.send("fastboot usb 0"); // 2024.04 syntax; blocks serving the gadget
+          await sleep(2500); // let the stage-2 gadget enumerate
+          ctx.log("trapped in fastboot — connect over USB to install the OS.");
+        },
       },
+      ...osInstallSteps(
+        "os",
+        "The device rebooted into the new bootloader and is now trapped in fastboot. " +
+          "Pick it from the browser's device list to install Linux.",
+      ),
     ],
   };
 }

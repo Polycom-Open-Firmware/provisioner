@@ -21,7 +21,7 @@ export type { RunnerOptions } from "./engine/runner";
 
 // Flows
 export { unlockFlow } from "./flow/unlock";
-export { reinstallLinuxFlow } from "./flow/reinstall-linux";
+export { reinstallLinuxFlow, osInstallSteps } from "./flow/reinstall-linux";
 
 // Profiles
 export {

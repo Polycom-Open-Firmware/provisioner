@@ -59,6 +59,12 @@ export class WizardRunner {
     void this.enter(this.index - 1);
   }
 
+  /** Re-run the current action step — recover from a failed action (e.g. a missed trap). */
+  retry(): void {
+    const step = this.currentStep;
+    if (step && step.type === "action") void this.enter(this.index);
+  }
+
   /** Confirm the current confirm-step (same as next, named for the UI's intent). */
   confirm(): void {
     this.next();
