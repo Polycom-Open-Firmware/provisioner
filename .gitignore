@@ -13,3 +13,6 @@ artifacts/*.simg
 artifacts/*.bin
 *.zip
 packages/web/public/artifacts
+
+# Agent worktrees / local session dirs
+.claude/
