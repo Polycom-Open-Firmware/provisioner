@@ -20,6 +20,8 @@ interface StepBase {
   title: string;
   /** Body copy (plain/markdown); the UI renders it. */
   body?: string;
+  /** Ordered image URLs to show as a step-through slideshow (e.g. disassembly). */
+  gallery?: string[];
 }
 
 export interface InfoStep extends StepBase {

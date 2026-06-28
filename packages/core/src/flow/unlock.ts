@@ -58,6 +58,25 @@ export function unlockFlow(): Flow {
           "device is ready to use. You'll need the serial adapter and a USB cable.",
       },
       {
+        id: "disassembly",
+        type: "info",
+        rail: "Open it up",
+        title: "Open the device",
+        body:
+          "Open the housing to reach the serial header inside. Step through the photos with " +
+          "the arrows, then press Next.",
+        gallery: [
+          "/disassembly/01.jpg",
+          "/disassembly/02.jpg",
+          "/disassembly/03.jpg",
+          "/disassembly/04.jpg",
+          "/disassembly/05.jpg",
+          "/disassembly/06.jpg",
+          "/disassembly/07.jpg",
+          "/disassembly/08.jpg",
+        ],
+      },
+      {
         id: "connect-serial",
         type: "confirm",
         rail: "Serial",
