@@ -117,10 +117,11 @@ export function reinstallLinuxFlow(): Flow {
         id: "intro",
         type: "info",
         rail: "Intro",
-        title: "Install or Update OS",
+        title: "Put the device into fastboot",
+        icon: "gesture",
         body:
-          "This writes a fresh OS image to an already-unlocked device. " +
-          "Put the device into fastboot with the four-finger gesture at the boot selector.",
+          "This installs or updates Linux on a device that's already unlocked. On the boot " +
+          "selector screen, touch it with four fingers to enter fastboot, then press Next.",
       },
       ...osInstallSteps("os"),
     ],

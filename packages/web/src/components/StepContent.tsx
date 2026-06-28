@@ -1,10 +1,13 @@
 // The content region. Renders per step type: info/confirm copy (+ placeholder
 // asset blocks for serial/USB gestures), the action progress bar (detailed log
 // streams to the Console), the done success block, and any error surface.
-import { AlertTriangle, Check, Loader2 } from "lucide-react";
+import { AlertTriangle, Check, Hand, Loader2, type LucideIcon } from "lucide-react";
 import { useWizard } from "@/lib/wizard";
 import { Progress } from "@/components/ui/progress";
 import type { Gesture } from "@provisioner/core";
+
+// Step icon keys (core sets a string; the UI owns the glyph).
+const STEP_ICONS: Record<string, LucideIcon> = { gesture: Hand };
 
 function fmtBytes(n: number): string {
   if (n >= 1 << 20) return (n / (1 << 20)).toFixed(1) + " MiB";
@@ -43,12 +46,17 @@ export function StepContent() {
   if (!step) return null;
 
   const pct = progress && progress.total > 0 ? (progress.done / progress.total) * 100 : 0;
+  const StepIcon = step.icon ? STEP_ICONS[step.icon] : undefined;
 
   return (
     <div className="mx-auto max-w-2xl p-10">
       {step.type === "done" ? (
         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary-tint">
           <Check className="h-6 w-6 text-primary" />
+        </div>
+      ) : StepIcon ? (
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary-tint">
+          <StepIcon className="h-6 w-6 text-primary" />
         </div>
       ) : (
         <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">

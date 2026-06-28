@@ -20,6 +20,8 @@ interface StepBase {
   title: string;
   /** Body copy (plain/markdown); the UI renders it. */
   body?: string;
+  /** Optional icon key the UI maps to a glyph (e.g. "gesture"). */
+  icon?: string;
 }
 
 export interface InfoStep extends StepBase {
