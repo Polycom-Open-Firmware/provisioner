@@ -3,10 +3,12 @@
 import { ChevronRight } from "lucide-react";
 import { useWizard } from "@/lib/wizard";
 import { Badge } from "@/components/ui/badge";
+import { DEVICE_IMAGES } from "@/lib/devices";
 
 export function FlowPicker() {
   const { device, pickFlow, back } = useWizard();
   if (!device) return null;
+  const img = DEVICE_IMAGES[device.id];
 
   return (
     <div className="flex flex-1 flex-col p-10">
@@ -15,6 +17,13 @@ export function FlowPicker() {
       </button>
 
       <div className="mx-auto mt-6 w-full max-w-2xl">
+        {img && (
+          <img
+            src={img.src}
+            alt={device.name}
+            className={`mb-3 h-24 object-contain object-left ${img.scale ?? ""}`}
+          />
+        )}
         <h1 className="text-[27px] font-bold tracking-[-0.02em] text-foreground">What do you want to do?</h1>
         <p className="mt-1 text-[15px] text-body">{device.name}</p>
 

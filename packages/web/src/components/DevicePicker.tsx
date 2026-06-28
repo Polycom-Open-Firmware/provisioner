@@ -4,13 +4,7 @@ import { AlertTriangle } from "lucide-react";
 import { useWizard } from "@/lib/wizard";
 import { Badge } from "@/components/ui/badge";
 import { webSupport } from "@/backend";
-
-// Device id -> bundled product image (web asset in public/). Kept in the UI, not
-// core, since asset URLs are a web-only concern. `scale` matches differently-framed
-// product shots to each other (TC8's is tighter, so shrink it to ~match the C60).
-const DEVICE_IMAGES: Record<string, { src: string; scale?: string }> = {
-  tc8: { src: "/poly-tc8.png", scale: "scale-[0.8]" },
-};
+import { DEVICE_IMAGES } from "@/lib/devices";
 
 function UnsupportedBanner({ sup }: { sup: ReturnType<typeof webSupport> }) {
   const missing = [
