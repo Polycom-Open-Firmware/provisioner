@@ -60,7 +60,9 @@ export function StepContent() {
       <h1 className="mt-2 text-[27px] font-bold tracking-[-0.02em] text-foreground">{step.title}</h1>
       {step.body && <p className="mt-3 text-[15px] leading-relaxed text-body">{step.body}</p>}
 
-      {step.gallery && step.gallery.length > 0 && <Slideshow images={step.gallery} className="mt-6" />}
+      {step.gallery && step.gallery.length > 0 && (
+        <Slideshow images={step.gallery} className="mx-auto mt-6 max-w-lg" />
+      )}
 
       {step.type === "confirm" && step.gesture && <GestureHint gesture={step.gesture} />}
 
