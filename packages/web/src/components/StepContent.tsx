@@ -51,11 +51,13 @@ export function StepContent() {
           <Check className="h-6 w-6 text-primary" />
         </div>
       ) : (
-        <div className="font-mono text-[11px] uppercase tracking-widest text-primary">{kindLabel(step.type)}</div>
+        <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+          {kindLabel(step.type)}
+        </div>
       )}
 
-      <h1 className="mt-2 text-2xl font-semibold text-foreground">{step.title}</h1>
-      {step.body && <p className="mt-3 leading-relaxed text-body">{step.body}</p>}
+      <h1 className="mt-2 text-[27px] font-bold tracking-[-0.02em] text-foreground">{step.title}</h1>
+      {step.body && <p className="mt-3 text-[15px] leading-relaxed text-body">{step.body}</p>}
 
       {step.type === "confirm" && step.gesture && <GestureHint gesture={step.gesture} />}
 

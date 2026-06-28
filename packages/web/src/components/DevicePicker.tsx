@@ -32,9 +32,11 @@ export function DevicePicker() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8 p-10">
       <div className="text-center">
-        <div className="font-mono text-xs uppercase tracking-widest text-primary">Open Polycom</div>
-        <h1 className="mt-2 text-2xl font-semibold text-foreground">Pick your device</h1>
-        <p className="mt-1 text-sm text-body">
+        <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+          Open Polycom
+        </div>
+        <h1 className="mt-2 text-[27px] font-bold tracking-[-0.02em] text-foreground">Pick your device</h1>
+        <p className="mt-1 text-[15px] text-body">
           Unlock it and install Linux over USB. Nothing leaves your machine.
         </p>
       </div>
@@ -46,13 +48,13 @@ export function DevicePicker() {
           <button
             key={d.id}
             onClick={() => pickDevice(d)}
-            className="flex flex-col items-start gap-3 rounded-xl bg-background p-5 text-left shadow-soft ring-1 ring-border transition hover:ring-primary"
+            className="flex flex-col items-start gap-3 rounded-[12px] border border-border bg-background p-5 text-left transition hover:border-primary"
           >
-            <div className="flex h-24 w-full items-center justify-center rounded-lg bg-rail font-mono text-xs text-muted">
+            <div className="flex h-24 w-full items-center justify-center rounded-[8px] bg-rail font-mono text-xs text-muted">
               device photo
             </div>
             <div>
-              <div className="font-medium text-foreground">{d.name}</div>
+              <div className="text-[15px] font-semibold text-foreground">{d.name}</div>
               <div className="text-xs text-muted">
                 {d.flows.filter((f) => !f.soon).length} guided flows
               </div>
@@ -60,8 +62,8 @@ export function DevicePicker() {
           </button>
         ))}
 
-        <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-border bg-background p-5 opacity-60">
-          <div className="flex h-24 w-full items-center justify-center rounded-lg bg-rail font-mono text-xs text-muted">
+        <div className="flex flex-col items-start gap-3 rounded-[12px] border border-dashed border-border bg-background p-5 opacity-60">
+          <div className="flex h-24 w-full items-center justify-center rounded-[8px] bg-rail font-mono text-xs text-muted">
             more soon
           </div>
           <Badge>Soon</Badge>

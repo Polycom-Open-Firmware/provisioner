@@ -13,3 +13,4 @@ artifacts/*.simg
 artifacts/*.bin
 *.zip
 package-lock.json
+packages/web/public/artifacts

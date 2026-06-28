@@ -15,23 +15,23 @@ export function FlowPicker() {
       </button>
 
       <div className="mx-auto mt-6 w-full max-w-2xl">
-        <h1 className="text-2xl font-semibold text-foreground">What do you want to do?</h1>
-        <p className="mt-1 text-sm text-body">{device.name}</p>
+        <h1 className="text-[27px] font-bold tracking-[-0.02em] text-foreground">What do you want to do?</h1>
+        <p className="mt-1 text-[15px] text-body">{device.name}</p>
 
-        <div className="mt-6 flex flex-col gap-3">
+        <div className="mt-6 border-t border-border">
           {device.flows.map((f) => (
             <button
               key={f.id}
               disabled={f.soon}
               onClick={() => pickFlow(f)}
-              className="flex items-center justify-between rounded-xl bg-background p-5 text-left shadow-soft ring-1 ring-border transition enabled:hover:ring-primary disabled:opacity-55"
+              className="flex w-full items-center justify-between gap-4 border-b border-border px-1 py-[17px] text-left transition enabled:hover:bg-rail disabled:opacity-55"
             >
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground">{f.title}</span>
+                  <span className="text-[15px] font-semibold text-foreground">{f.title}</span>
                   {f.soon && <Badge>Soon</Badge>}
                 </div>
-                {f.summary && <div className="mt-0.5 text-sm text-muted">{f.summary}</div>}
+                {f.summary && <div className="mt-0.5 text-[13px] text-muted">{f.summary}</div>}
               </div>
               {!f.soon && <ChevronRight className="h-5 w-5 shrink-0 text-muted" />}
             </button>

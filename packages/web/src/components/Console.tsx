@@ -26,7 +26,7 @@ export function Console() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex w-10 shrink-0 flex-col items-center gap-2 border-l border-border bg-console py-3 text-console-fg"
+        className="flex w-9 shrink-0 flex-col items-center gap-2 border-l border-border bg-console py-3 text-console-fg"
         title="Show console"
       >
         <Terminal className="h-4 w-4" />
@@ -36,10 +36,10 @@ export function Console() {
   }
 
   return (
-    <aside className="flex w-[340px] shrink-0 flex-col border-l border-border bg-console">
+    <aside className="flex w-[312px] shrink-0 flex-col border-l border-border bg-console">
       <div className="flex h-10 shrink-0 items-center justify-between px-3">
         <div className="flex items-center gap-2 font-mono text-xs text-console-fg">
-          <span className={cn("h-2 w-2 rounded-full", running ? "animate-pulse bg-primary" : "bg-console-ts")} />
+          <span className={cn("h-[7px] w-[7px] rounded-full", running ? "animate-pulse bg-primary" : "bg-console-ts")} />
           console
         </div>
         <button onClick={() => setOpen(false)} className="text-console-ts hover:text-console-fg" title="Hide console">

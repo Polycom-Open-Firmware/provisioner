@@ -27,7 +27,7 @@ export function Footer() {
 
   return (
     <div className="flex shrink-0 items-center justify-between border-t border-border px-8 py-4">
-      <div className="font-mono text-xs text-muted">
+      <div className="font-mono text-[12px] font-semibold tracking-[0.04em] text-primary">
         Step {Math.min(stepIndex + 1, flow.steps.length)} of {flow.steps.length}
       </div>
       <div className="flex items-center gap-2">
