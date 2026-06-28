@@ -63,8 +63,10 @@ export function unlockFlow(): Flow {
         type: "confirm",
         rail: "Serial",
         title: "Connect the serial adapter",
-        body: "Plug in the serial header, then pick the port. Leave the device powered off for now.",
-        confirmLabel: "Port connected",
+        body:
+          "Plug the serial adapter into the device's header and into this computer, and " +
+          "leave the device powered off. Then press Continue and choose the serial port.",
+        confirmLabel: "Continue",
         gesture: "connect-serial",
       },
       {
@@ -99,8 +101,10 @@ export function unlockFlow(): Flow {
         type: "confirm",
         rail: "Fastboot",
         title: "Connect over USB",
-        body: "The device is now in stock fastboot. Pick it from the browser's device list.",
-        confirmLabel: "Device connected",
+        body:
+          "The device is now in fastboot. Connect it to this computer over USB, then press " +
+          "Continue and choose it from the list.",
+        confirmLabel: "Continue",
         gesture: "connect-usb",
       },
       {
@@ -192,8 +196,8 @@ export function unlockFlow(): Flow {
       },
       ...osInstallSteps(
         "os",
-        "The device rebooted into the new bootloader and is now trapped in fastboot. " +
-          "Pick it from the browser's device list to install Linux.",
+        "The device rebooted into the new bootloader and is trapped in fastboot. Connect it " +
+          "over USB, then press Continue and choose it from the list to install Linux.",
       ),
     ],
   };

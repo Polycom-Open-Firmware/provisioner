@@ -3,7 +3,7 @@
 // pathfinder `provision-tool/src/flashos.js`: flashes the Android-format slot
 // images (boot/dtbo/vbmeta) then the multi-GB rootfs to `userdata` via the
 // Android sparse protocol, sets the active slot, and reboots.
-import { flashSparse } from "../protocol/sparse";
+import { flashSparse, parseSparse, planResparse } from "../protocol/sparse";
 import type { Flow, FlowContext, Step } from "../engine/types";
 
 const SLOT = "a"; // "replace stock": overwrite boot_a/dtbo_a/vbmeta_a + userdata
@@ -19,31 +19,49 @@ async function runFlash(ctx: FlowContext): Promise<void> {
 
   const man = await ctx.artifacts.manifest("os-manifest.json");
 
-  // small Android images -> boot_<slot> / dtbo_<slot> / vbmeta_<slot>.
+  // Fetch every artifact up front so the progress bar can run ONE 0→100 % across
+  // the whole install (the small slot images + the multi-GB rootfs), weighted by
+  // bytes — instead of resetting per partition.
+  const small: { part: string; data: Uint8Array }[] = [];
   for (const key of ["boot", "dtbo", "vbmeta"] as const) {
     const a = man?.[key];
     if (!a || !a.url) throw new Error("manifest missing " + key + ".url");
-    const part = key + "_" + SLOT;
-    const data = await ctx.artifacts.binary(a.url);
-    ctx.log("flashing " + part + " (" + data.byteLength + " B)...");
-    await ctx.fb.flash(part, data, (d, t) => ctx.progress(d, t), (m) => ctx.log("  INFO " + m));
-    ctx.log("  " + part + " OK");
+    small.push({ part: key + "_" + SLOT, data: await ctx.artifacts.binary(a.url) });
   }
-
-  // rootfs -> userdata via Android sparse (resparsed to <= max-download-size).
   const rf = man?.rootfs;
   if (!rf || !rf.url) throw new Error("manifest missing rootfs.url");
   const simg = await ctx.artifacts.binary(rf.url);
+
+  // Materialized sparse byte count — the unit flashSparse reports progress in — so
+  // every contribution to the bar is in the same currency.
+  const sparseTotal = planResparse(parseSparse(simg), ctx.fb.maxDownload).subimages.reduce(
+    (a, s) => a + s.size,
+    0,
+  );
+  const grandTotal = small.reduce((a, s) => a + s.data.byteLength, 0) + sparseTotal;
+  const info = (m: string) => ctx.log("  INFO " + m);
+  let base = 0;
+
+  for (const s of small) {
+    ctx.log("flashing " + s.part + " (" + s.data.byteLength + " B)...");
+    await ctx.fb.flash(s.part, s.data, (d) => ctx.progress(base + d, grandTotal), info);
+    base += s.data.byteLength;
+    ctx.progress(base, grandTotal);
+    ctx.log("  " + s.part + " OK");
+  }
+
   ctx.log("flashing userdata (sparse, " + simg.byteLength + " B sparse image)...");
   await flashSparse(ctx.fb, "userdata", simg, {
-    onProgress: (d, t) => ctx.progress(d, t),
-    onInfo: (m) => ctx.log("  INFO " + m),
+    onProgress: (d) => ctx.progress(base + d, grandTotal),
+    onInfo: info,
   });
+  base += sparseTotal;
+  ctx.progress(grandTotal, grandTotal);
   ctx.log("  userdata OK");
 
   // make the slot active + reboot into Debian.
   ctx.log("set_active " + SLOT);
-  try { await ctx.fb.setActive(SLOT, (m) => ctx.log("  INFO " + m)); }
+  try { await ctx.fb.setActive(SLOT, info); }
   catch (e) { ctx.log("  set_active note: " + (e as Error).message); }
   ctx.log("rebooting into Debian...");
   await ctx.fb.reboot();
@@ -65,8 +83,10 @@ export function osInstallSteps(idPrefix = "os", connectBody?: string): Step[] {
       type: "confirm",
       rail: "USB",
       title: "Connect over USB",
-      body: connectBody ?? "With the device in fastboot, pick it from the browser's device list.",
-      confirmLabel: "Device connected",
+      body:
+        connectBody ??
+        "Connect the device to this computer over USB, then press Continue and choose it from the list.",
+      confirmLabel: "Continue",
       gesture: "connect-usb",
     },
     {
