@@ -8,29 +8,30 @@ export function Slideshow({ images, className }: { images: string[]; className?:
   const [i, setI] = React.useState(0);
   const n = images.length;
   if (n === 0) return null;
-  const go = (d: number) => setI((p) => (p + d + n) % n);
+  // Clamp at the ends — no wrap-around.
+  const go = (d: number) => setI((p) => Math.max(0, Math.min(n - 1, p + d)));
 
   return (
     <div className={cn("select-none", className)}>
       <div className="relative overflow-hidden rounded-[12px] border border-border bg-rail">
         <img src={images[i]} alt={`Step ${i + 1} of ${n}`} className="aspect-[4/3] w-full object-cover" />
-        {n > 1 && (
-          <>
-            <button
-              onClick={() => go(-1)}
-              aria-label="Previous photo"
-              className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-foreground shadow-soft transition hover:bg-white"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => go(1)}
-              aria-label="Next photo"
-              className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-foreground shadow-soft transition hover:bg-white"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </>
+        {i > 0 && (
+          <button
+            onClick={() => go(-1)}
+            aria-label="Previous photo"
+            className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-foreground shadow-soft transition hover:bg-white"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        )}
+        {i < n - 1 && (
+          <button
+            onClick={() => go(1)}
+            aria-label="Next photo"
+            className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-foreground shadow-soft transition hover:bg-white"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         )}
       </div>
 
