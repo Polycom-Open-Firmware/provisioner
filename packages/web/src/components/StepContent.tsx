@@ -27,16 +27,11 @@ const SERIAL_PARTS = [
 function GestureHint({ gesture }: { gesture: Gesture }) {
   if (gesture === "connect-serial")
     return (
-      <div className="mt-6 grid grid-cols-3 gap-3">
-        {SERIAL_PARTS.map((p) => (
-          <figure key={p.src} className="m-0">
-            <div className="flex h-40 items-center justify-center overflow-hidden rounded-[8px] border border-border bg-rail">
-              <img src={p.src} alt={p.label} className="max-h-40 max-w-full object-contain" />
-            </div>
-            <figcaption className="mt-1.5 text-center font-mono text-[11px] text-muted">{p.label}</figcaption>
-          </figure>
-        ))}
-      </div>
+      <Slideshow
+        images={SERIAL_PARTS.map((p) => p.src)}
+        captions={SERIAL_PARTS.map((p) => p.label)}
+        className="mt-6"
+      />
     );
   if (gesture === "connect-usb")
     return (

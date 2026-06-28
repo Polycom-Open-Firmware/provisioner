@@ -4,12 +4,21 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function Slideshow({ images, className }: { images: string[]; className?: string }) {
+export function Slideshow({
+  images,
+  captions,
+  className,
+}: {
+  images: string[];
+  captions?: string[];
+  className?: string;
+}) {
   const [i, setI] = React.useState(0);
   const n = images.length;
   if (n === 0) return null;
   // Clamp at the ends — no wrap-around.
   const go = (d: number) => setI((p) => Math.max(0, Math.min(n - 1, p + d)));
+  const caption = captions?.[i];
 
   return (
     <div className={cn("flex select-none flex-col items-center", className)}>
@@ -41,6 +50,8 @@ export function Slideshow({ images, className }: { images: string[]; className?:
           </button>
         )}
       </div>
+
+      {caption && <div className="mt-2 text-center font-mono text-[12px] text-muted">{caption}</div>}
 
       {n > 1 && (
         <div className="mt-3 flex items-center justify-center gap-3">
