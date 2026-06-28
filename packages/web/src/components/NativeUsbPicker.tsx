@@ -46,6 +46,7 @@ export function NativeUsbPicker() {
           No device in fastboot detected. Put the device into fastboot and press refresh.
         </div>
       )}
+      {devices.length > 0 && <p className="mb-2 text-[13px] text-body">Click your device to connect.</p>}
 
       <div className="flex flex-col gap-2">
         {devices.map((d, i) => (

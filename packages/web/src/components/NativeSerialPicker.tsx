@@ -44,6 +44,7 @@ export function NativeSerialPicker() {
           No serial ports detected. Plug in the USB-serial adapter and press refresh.
         </div>
       )}
+      {ports.length > 0 && <p className="mb-2 text-[13px] text-body">Click a port to connect.</p>}
 
       <div className="flex flex-col gap-2">
         {ports.map((p) => (
