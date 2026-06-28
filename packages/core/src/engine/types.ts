@@ -7,7 +7,7 @@ import type { Backend, UsbFilter } from "../transport/transport";
 import type { Fastboot } from "../protocol/fastboot";
 import type { UBootConsole } from "../protocol/uboot-console";
 
-export type StepType = "info" | "confirm" | "action" | "done";
+export type StepType = "info" | "confirm" | "action" | "done" | "form";
 
 /** A physical action the operator must take before a confirm step proceeds. */
 export type Gesture = "connect-serial" | "connect-usb" | "power-cycle" | null;
@@ -46,7 +46,24 @@ export interface DoneStep extends StepBase {
   type: "done";
 }
 
-export type Step = InfoStep | ConfirmStep | ActionStep | DoneStep;
+/** One input on a form step. */
+export interface FormField {
+  key: string;
+  label: string;
+  placeholder?: string;
+  default?: string;
+  /** Render as a masked password input. */
+  secret?: boolean;
+}
+
+export interface FormStep extends StepBase {
+  type: "form";
+  fields: FormField[];
+  /** Mutable map the UI writes entered values into; the flow's action reads it. */
+  values: Record<string, string>;
+}
+
+export type Step = InfoStep | ConfirmStep | ActionStep | DoneStep | FormStep;
 
 export interface Flow {
   id: string;

@@ -168,7 +168,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     const step = s.flow?.steps[s.stepIndex];
     if (!step) return;
 
-    if (step.type === "info") return runner.next();
+    if (step.type === "info" || step.type === "form") return runner.next();
     if (step.type === "done") return restart();
     if (step.type === "action") return; // auto-runs; no primary action
 

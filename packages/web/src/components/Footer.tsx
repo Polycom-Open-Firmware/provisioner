@@ -23,7 +23,7 @@ export function Footer() {
     !running && !busy && !isAction && step.type !== "done" && (!prev || prev.type !== "action");
 
   const label =
-    step.type === "info"
+    step.type === "info" || step.type === "form"
       ? "Next"
       : step.type === "confirm"
         ? step.confirmLabel ?? "Continue"

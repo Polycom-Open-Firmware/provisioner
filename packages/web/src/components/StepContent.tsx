@@ -1,6 +1,7 @@
 // The content region. Renders per step type: info/confirm copy (+ placeholder
 // asset blocks for serial/USB gestures), the action progress bar (detailed log
 // streams to the Console), the done success block, and any error surface.
+import * as React from "react";
 import { AlertTriangle, Check, Loader2 } from "lucide-react";
 import { useWizard } from "@/lib/wizard";
 import { Progress } from "@/components/ui/progress";
@@ -8,7 +9,7 @@ import { Slideshow } from "./Slideshow";
 import { NativeSerialPicker } from "./NativeSerialPicker";
 import { NativeUsbPicker } from "./NativeUsbPicker";
 import { isTauri } from "@/native/backend";
-import type { Gesture } from "@provisioner/core";
+import type { FormStep, Gesture } from "@provisioner/core";
 
 function fmtBytes(n: number): string {
   if (n >= 1 << 20) return (n / (1 << 20)).toFixed(1) + " MiB";
@@ -26,6 +27,39 @@ const SERIAL_PARTS = [
   { src: "/serial/level-shifter.jpg", label: "Level shifter" },
   { src: "/serial/usb-to-serial.jpg", label: "USB-to-serial" },
 ];
+
+// Renders a form step's fields, writing entered values through to step.values
+// (the same object the flow's action step reads) so untouched defaults still apply.
+function StepForm({ step }: { step: FormStep }) {
+  const [vals, setVals] = React.useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    for (const f of step.fields) init[f.key] = step.values[f.key] ?? f.default ?? "";
+    Object.assign(step.values, init);
+    return init;
+  });
+  const set = (key: string, v: string) => {
+    setVals((p) => ({ ...p, [key]: v }));
+    step.values[key] = v;
+  };
+  return (
+    <div className="mt-6 flex flex-col gap-4">
+      {step.fields.map((f) => (
+        <label key={f.key} className="flex flex-col gap-1">
+          <span className="text-[13px] font-medium text-body">{f.label}</span>
+          <input
+            type={f.secret ? "password" : "text"}
+            value={vals[f.key] ?? ""}
+            onChange={(e) => set(f.key, e.target.value)}
+            placeholder={f.placeholder}
+            spellCheck={false}
+            autoComplete="off"
+            className="rounded-[8px] border border-border bg-background px-3 py-2 text-[15px] text-foreground outline-none transition placeholder:text-muted focus:border-primary"
+          />
+        </label>
+      ))}
+    </div>
+  );
+}
 
 function GestureHint({ gesture }: { gesture: Gesture }) {
   if (gesture === "connect-serial")
@@ -72,6 +106,8 @@ export function StepContent() {
       {step.gallery && step.gallery.length > 0 && (
         <Slideshow images={step.gallery} className="mt-6" />
       )}
+
+      {step.type === "form" && <StepForm step={step} />}
 
       {step.type === "confirm" && step.gesture && <GestureHint gesture={step.gesture} />}
 
