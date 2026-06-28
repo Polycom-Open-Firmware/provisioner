@@ -80,8 +80,8 @@ export function unlockFlow(): Flow {
         rail: "Connect serial",
         title: "Connect the serial adapter",
         body:
-          "Plug the serial adapter into the device's header and into this computer, and " +
-          "leave the device powered off. Then press Continue and choose the serial port.",
+          "Wire up the serial adapter as shown, with the device powered off, then press " +
+          "Continue and choose the port.",
         confirmLabel: "Continue",
         gesture: "connect-serial",
       },
@@ -212,8 +212,8 @@ export function unlockFlow(): Flow {
       },
       ...osInstallSteps(
         "os",
-        "The device rebooted into the new bootloader and is trapped in fastboot. Connect it " +
-          "over USB, then press Continue and choose it from the list to install Linux.",
+        "The device is now in fastboot. Connect it over USB, then press Continue and " +
+          "choose it from the list.",
       ),
     ],
   };

@@ -19,7 +19,7 @@ function kindLabel(t: string): string {
 
 // The serial cable, end to end: TC8 connector -> level shifter -> USB-to-serial.
 const SERIAL_PARTS = [
-  { src: "/serial/tc8-end.jpg", label: "TC8 connector" },
+  { src: "/serial/tc8-end.jpg", label: "TC8 connector — GH1.25 4P" },
   { src: "/serial/level-shifter.jpg", label: "Level shifter" },
   { src: "/serial/usb-to-serial.jpg", label: "USB-to-serial" },
 ];
@@ -38,7 +38,7 @@ function GestureHint({ gesture }: { gesture: Gesture }) {
       <img
         src="/usb-otg.jpg"
         alt="USB-C cable connected to the device"
-        className="mx-auto mt-6 block max-h-[calc(min(82vh,760px)_-_360px)] w-auto rounded-[8px] border border-border object-contain"
+        className="mx-auto mt-6 block max-h-[min(34vh,300px)] w-auto rounded-[8px] border border-border object-contain"
       />
     );
   return null;

@@ -29,7 +29,7 @@ export function Slideshow({
         <img
           src={images[i]}
           alt={`Step ${i + 1} of ${n}`}
-          className="block max-h-[calc(min(82vh,760px)_-_360px)] max-w-[460px]"
+          className="block max-h-[min(34vh,300px)] max-w-[440px]"
         />
         {i > 0 && (
           <button
