@@ -18,8 +18,8 @@ export class NativeSerialTransport implements SerialTransport {
     return this.isOpen;
   }
 
-  async open(opts: { baudRate?: number } = {}): Promise<void> {
-    await invoke("serial_open", { baudRate: opts.baudRate ?? 115200 });
+  async open(opts: { baudRate?: number; path?: string } = {}): Promise<void> {
+    await invoke("serial_open", { baudRate: opts.baudRate ?? 115200, path: opts.path ?? null });
     this.isOpen = true;
   }
 

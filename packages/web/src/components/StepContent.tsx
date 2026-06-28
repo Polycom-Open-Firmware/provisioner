@@ -5,6 +5,9 @@ import { AlertTriangle, Check, Loader2 } from "lucide-react";
 import { useWizard } from "@/lib/wizard";
 import { Progress } from "@/components/ui/progress";
 import { Slideshow } from "./Slideshow";
+import { NativeSerialPicker } from "./NativeSerialPicker";
+import { NativeUsbPicker } from "./NativeUsbPicker";
+import { isTauri } from "@/native/backend";
 import type { Gesture } from "@provisioner/core";
 
 function fmtBytes(n: number): string {
@@ -71,6 +74,10 @@ export function StepContent() {
       )}
 
       {step.type === "confirm" && step.gesture && <GestureHint gesture={step.gesture} />}
+
+      {step.type === "confirm" && step.gesture === "connect-serial" && isTauri() && <NativeSerialPicker />}
+
+      {step.type === "confirm" && step.gesture === "connect-usb" && isTauri() && <NativeUsbPicker />}
 
       {step.type === "action" && (
         <div className="mt-8">

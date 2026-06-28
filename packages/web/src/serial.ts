@@ -20,7 +20,8 @@ export class WebSerialTransport implements SerialTransport {
     return !!this.port;
   }
 
-  async open(opts: { baudRate?: number } = {}): Promise<void> {
+  async open(opts: { baudRate?: number; path?: string } = {}): Promise<void> {
+    // `path` is native-only; the browser always prompts with its own chooser.
     this.port = await navigator.serial.requestPort();
     await this.port.open({
       baudRate: opts.baudRate ?? 115200,

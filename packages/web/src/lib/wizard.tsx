@@ -47,6 +47,10 @@ export interface WizardApi extends WizardState {
   back: () => void;
   retry: () => void;
   restart: () => void;
+  /** Native only: open a specific serial port, then advance. */
+  connectSerialPort: (path: string) => Promise<void>;
+  /** Native only: open a specific USB device, then advance. */
+  connectUsbDevice: (dev: { vendorId: number; productId: number; serial?: string }) => Promise<void>;
 }
 
 const initial: WizardState = {
@@ -121,6 +125,30 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
 
   const retry = () => runner.retry();
 
+  const connectSerialPort = async (path: string) => {
+    setState((x) => ({ ...x, busy: true, error: null }));
+    try {
+      await runner.attachSerial(115200, path);
+      runner.confirm();
+    } catch (err) {
+      setState((x) => ({ ...x, error: (err as Error).message }));
+    } finally {
+      setState((x) => ({ ...x, busy: false }));
+    }
+  };
+
+  const connectUsbDevice = async (dev: { vendorId: number; productId: number; serial?: string }) => {
+    setState((x) => ({ ...x, busy: true, error: null }));
+    try {
+      await runner.attachUsb([{ vendorId: dev.vendorId, productId: dev.productId }], dev.serial);
+      runner.confirm();
+    } catch (err) {
+      setState((x) => ({ ...x, error: (err as Error).message }));
+    } finally {
+      setState((x) => ({ ...x, busy: false }));
+    }
+  };
+
   const restart = () => setState({ ...initial });
 
   const back = () => {
@@ -174,6 +202,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     back,
     retry,
     restart,
+    connectSerialPort,
+    connectUsbDevice,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

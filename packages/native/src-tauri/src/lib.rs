@@ -58,10 +58,42 @@ struct UsbInner {
 #[derive(Default)]
 struct UsbState(Mutex<Option<UsbInner>>);
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UsbDeviceDesc {
+    vendor_id: u16,
+    product_id: u16,
+    product: Option<String>,
+    manufacturer: Option<String>,
+    serial: Option<String>,
+}
+
+#[tauri::command]
+fn usb_list(filters: Vec<UsbFilter>) -> Result<Vec<UsbDeviceDesc>, String> {
+    let all = nusb::list_devices().wait().map_err(|e| e.to_string())?;
+    Ok(all
+        .filter(|d| {
+            filters.is_empty()
+                || filters.iter().any(|f| {
+                    f.vendor_id.map_or(true, |v| v == d.vendor_id())
+                        && f.product_id.map_or(true, |p| p == d.product_id())
+                })
+        })
+        .map(|d| UsbDeviceDesc {
+            vendor_id: d.vendor_id(),
+            product_id: d.product_id(),
+            product: d.product_string().map(str::to_string),
+            manufacturer: d.manufacturer_string().map(str::to_string),
+            serial: d.serial_number().map(str::to_string),
+        })
+        .collect())
+}
+
 #[tauri::command]
 fn usb_open(
     filters: Vec<UsbFilter>,
     iface: Option<InterfaceMatch>,
+    serial: Option<String>,
     state: State<UsbState>,
 ) -> Result<DeviceInfo, String> {
     // Default match is the fastboot signature (class 0xff / sub 0x42 / proto 0x03).
@@ -75,11 +107,13 @@ fn usb_open(
     let di = nusb::list_devices()
         .wait()
         .map_err(|e| e.to_string())?
-        .find(|d| {
-            filters.iter().any(|f| {
+        .find(|d| match serial.as_deref() {
+            // A specific device was chosen in the picker -> match its serial.
+            Some(s) if !s.is_empty() => d.serial_number() == Some(s),
+            _ => filters.iter().any(|f| {
                 f.vendor_id.map_or(true, |v| v == d.vendor_id())
                     && f.product_id.map_or(true, |p| p == d.product_id())
-            })
+            }),
         })
         .ok_or("no matching USB device found (is it plugged in and in fastboot?)")?;
 
@@ -199,16 +233,48 @@ struct SerialInner {
 #[derive(Default)]
 struct SerialState(Mutex<Option<SerialInner>>);
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PortDesc {
+    name: String,
+    kind: String,
+    product: Option<String>,
+}
+
 #[tauri::command]
-fn serial_open(baud_rate: u32, state: State<SerialState>) -> Result<(), String> {
-    // No port chooser on native — prefer a USB serial adapter, else the first port.
+fn serial_list() -> Result<Vec<PortDesc>, String> {
     let ports = serialport::available_ports().map_err(|e| e.to_string())?;
-    let path = ports
-        .iter()
-        .find(|p| matches!(p.port_type, serialport::SerialPortType::UsbPort(_)))
-        .or_else(|| ports.first())
-        .map(|p| p.port_name.clone())
-        .ok_or("no serial ports found")?;
+    Ok(ports
+        .into_iter()
+        .map(|p| {
+            let (kind, product) = match &p.port_type {
+                serialport::SerialPortType::UsbPort(u) => ("USB".to_string(), u.product.clone()),
+                other => (format!("{other:?}"), None),
+            };
+            PortDesc {
+                name: p.port_name,
+                kind,
+                product,
+            }
+        })
+        .collect())
+}
+
+#[tauri::command]
+fn serial_open(baud_rate: u32, path: Option<String>, state: State<SerialState>) -> Result<(), String> {
+    // Use the explicitly-chosen port; otherwise prefer a USB serial adapter.
+    let path = match path {
+        Some(p) if !p.is_empty() => p,
+        _ => {
+            let ports = serialport::available_ports().map_err(|e| e.to_string())?;
+            ports
+                .iter()
+                .find(|p| matches!(p.port_type, serialport::SerialPortType::UsbPort(_)))
+                .or_else(|| ports.first())
+                .map(|p| p.port_name.clone())
+                .ok_or("no serial ports found")?
+        }
+    };
 
     let port = serialport::new(&path, baud_rate)
         .timeout(Duration::from_millis(50))
@@ -291,12 +357,14 @@ pub fn run() {
         .manage(UsbState::default())
         .manage(SerialState::default())
         .invoke_handler(tauri::generate_handler![
+            usb_list,
             usb_open,
             usb_close,
             usb_bulk_out,
             usb_bulk_in,
             usb_control_out,
             usb_control_in,
+            serial_list,
             serial_open,
             serial_read,
             serial_write,

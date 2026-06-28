@@ -52,8 +52,9 @@ export interface UsbTransport {
   readonly info: DeviceInfo | null;
   readonly connected: boolean;
 
-  /** Select + open a matching device, claim its interface, find bulk endpoints. */
-  open(filters: UsbFilter[], iface?: InterfaceMatch): Promise<DeviceInfo>;
+  /** Select + open a matching device, claim its interface, find bulk endpoints.
+   *  `opts.serial` (native only) targets a specific device; web uses its chooser. */
+  open(filters: UsbFilter[], iface?: InterfaceMatch, opts?: { serial?: string }): Promise<DeviceInfo>;
   close(): Promise<void>;
 
   /** Bulk OUT a chunk to the claimed interface's OUT endpoint. */
@@ -69,7 +70,8 @@ export interface UsbTransport {
 /** Console-style serial transport — drives the U-Boot prompt during bootstrap. */
 export interface SerialTransport {
   readonly connected: boolean;
-  open(opts?: { baudRate?: number }): Promise<void>;
+  /** `path` (native only) names a specific port; web ignores it and prompts. */
+  open(opts?: { baudRate?: number; path?: string }): Promise<void>;
   /** Send a line; the adapter appends the carriage return U-Boot expects. */
   send(line: string): Promise<void>;
   writeRaw(bytes: Uint8Array): Promise<void>;

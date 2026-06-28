@@ -34,7 +34,11 @@ export class WebUsbTransport implements UsbTransport {
     return !!this.device && this.device.opened;
   }
 
-  async open(filters: UsbFilter[], iface?: InterfaceMatch): Promise<DeviceInfo> {
+  async open(
+    filters: UsbFilter[],
+    iface?: InterfaceMatch,
+    _opts?: { serial?: string }, // native-only; the browser always prompts
+  ): Promise<DeviceInfo> {
     const dev = await navigator.usb.requestDevice({ filters: filters as USBDeviceFilter[] });
     await dev.open();
     if (dev.configuration === null) await dev.selectConfiguration(1);

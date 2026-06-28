@@ -20,10 +20,18 @@ export class NativeUsbTransport implements UsbTransport {
     return this.dev !== null;
   }
 
-  async open(filters: UsbFilter[], iface?: InterfaceMatch): Promise<DeviceInfo> {
-    // The Rust side picks the first device matching a filter (no chooser on
-    // native), opens it, finds + claims the interface and its bulk endpoints.
-    const info = await invoke<DeviceInfo>("usb_open", { filters, iface: iface ?? null });
+  async open(
+    filters: UsbFilter[],
+    iface?: InterfaceMatch,
+    opts?: { serial?: string },
+  ): Promise<DeviceInfo> {
+    // The Rust side opens the device the picker chose (by serial), or the first
+    // matching a filter; then claims the interface and finds its bulk endpoints.
+    const info = await invoke<DeviceInfo>("usb_open", {
+      filters,
+      iface: iface ?? null,
+      serial: opts?.serial ?? null,
+    });
     this.dev = info;
     return info;
   }

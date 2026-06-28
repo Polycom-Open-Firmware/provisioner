@@ -75,14 +75,14 @@ export class WizardRunner {
    * (requestDevice runs here, inside the user gesture) and unblocks any action
    * step awaiting ctx.connectUsb().
    */
-  async attachUsb(filters: UsbFilter[] = FASTBOOT_FILTERS): Promise<void> {
-    await this.fb.connect(filters);
+  async attachUsb(filters: UsbFilter[] = FASTBOOT_FILTERS, serial?: string): Promise<void> {
+    await this.fb.connect(filters, serial);
     this.usbReady?.resolve();
   }
 
   /** Called from the gesture button's click handler; opens the serial console. */
-  async attachSerial(baudRate = 115200): Promise<void> {
-    await this.uboot.serial.open({ baudRate });
+  async attachSerial(baudRate = 115200, path?: string): Promise<void> {
+    await this.uboot.serial.open({ baudRate, path });
     this.serialReady?.resolve();
   }
 

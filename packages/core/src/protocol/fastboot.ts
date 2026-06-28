@@ -45,9 +45,9 @@ export class Fastboot {
     return this.usb.connected;
   }
 
-  /** Open the fastboot gadget and identify it. */
-  async connect(filters: UsbFilter[] = FASTBOOT_FILTERS) {
-    await this.usb.open(filters, FASTBOOT_INTERFACE);
+  /** Open the fastboot gadget and identify it. `serial` targets a specific device (native). */
+  async connect(filters: UsbFilter[] = FASTBOOT_FILTERS, serial?: string) {
+    await this.usb.open(filters, FASTBOOT_INTERFACE, { serial });
     return this.identify();
   }
 

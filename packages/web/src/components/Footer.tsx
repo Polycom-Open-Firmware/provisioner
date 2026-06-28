@@ -4,6 +4,7 @@
 import { Loader2 } from "lucide-react";
 import { useWizard } from "@/lib/wizard";
 import { Button } from "@/components/ui/button";
+import { isTauri } from "@/native/backend";
 
 export function Footer() {
   const { currentStep, stepIndex, flow, running, busy, error, primary, back, retry } = useWizard();
@@ -12,6 +13,11 @@ export function Footer() {
 
   const isAction = step.type === "action";
   const actionErrored = isAction && !!error && !running && !busy;
+  // Native USB/serial use in-step pickers, not the footer button.
+  const hidePrimary =
+    isTauri() &&
+    step.type === "confirm" &&
+    (step.gesture === "connect-serial" || step.gesture === "connect-usb");
   const prev = stepIndex > 0 ? flow.steps[stepIndex - 1] : null;
   const canBack =
     !running && !busy && !isAction && step.type !== "done" && (!prev || prev.type !== "action");
@@ -35,7 +41,7 @@ export function Footer() {
         <Button variant="ghost" onClick={back} disabled={!canBack}>
           Back
         </Button>
-        {actionErrored ? (
+        {hidePrimary ? null : actionErrored ? (
           <Button variant="outline" onClick={retry}>
             Retry
           </Button>
