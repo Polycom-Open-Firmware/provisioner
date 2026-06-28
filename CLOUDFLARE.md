@@ -22,6 +22,15 @@ Pages → connect to Git) with:
 Pages auto-discovers `functions/` at the repo root, so the proxy ships with the
 site — no separate Worker, no extra deploy.
 
+## Custom domain — openpolycom.cc
+
+In the Pages project → **Custom domains** → add `openpolycom.cc` (and/or
+`www`/`app`). If the domain's nameservers are on Cloudflare, the DNS record is
+created automatically; otherwise add the `CNAME` Cloudflare shows you at your
+registrar. Nothing in the app is domain-specific — it serves from whatever origin
+Pages is on (same-origin `/artifact/...` + the GitHub API), so no rebuild is
+needed to point it at the domain.
+
 ## How it serves
 
 - Static SPA → `packages/web/dist` (the Vite build).
