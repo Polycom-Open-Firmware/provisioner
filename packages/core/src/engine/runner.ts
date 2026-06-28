@@ -4,7 +4,7 @@
 // calls attachUsb()/attachSerial() from its gesture-button handler; action steps
 // that need a channel await ctx.connectUsb()/connectSerial(), which resolve once
 // the gesture has attached it (mirrors the pathfinder's awaitUsb pattern).
-import type { Backend } from "../transport/transport";
+import type { Backend, UsbFilter } from "../transport/transport";
 import { Fastboot, FASTBOOT_FILTERS } from "../protocol/fastboot";
 import { UBootConsole } from "../protocol/uboot-console";
 import type { Artifacts, Flow, FlowContext, Step } from "./types";
@@ -69,8 +69,8 @@ export class WizardRunner {
    * (requestDevice runs here, inside the user gesture) and unblocks any action
    * step awaiting ctx.connectUsb().
    */
-  async attachUsb(): Promise<void> {
-    await this.fb.connect(FASTBOOT_FILTERS);
+  async attachUsb(filters: UsbFilter[] = FASTBOOT_FILTERS): Promise<void> {
+    await this.fb.connect(filters);
     this.usbReady?.resolve();
   }
 

@@ -28,12 +28,20 @@ the proven pathfinder tool in `../provision-tool/`.
 - ✅ Core engine: fastboot, sparse, U-Boot console; wizard runner + event stream;
   `unlock` and `reinstall-linux` flows; TC8 profile. Typechecks clean.
 - ✅ Web transport adapter (WebUSB + Web Serial + HTTP artifacts).
-- ⏳ React + shadcn UI (separate thread — wizard markup from Claude designer).
+- ✅ React + shadcn wizard UI wired to the runner — window / step rail / content /
+  footer / persistent console, Polycom design tokens. Typechecks + builds clean.
+- ⏳ Real device bring-up (needs hardware) + drop-in design assets.
 - ⏳ Native (Tauri) flavor.
 
 ## Develop
 
 ```
 npm install
-npm run typecheck   # all workspaces
+npm run typecheck            # all workspaces
+npm run dev -w @provisioner/web      # wizard dev server (http://localhost:5173)
+npm run build -w @provisioner/web    # production bundle
 ```
+
+The web app talks to the device over WebUSB + Web Serial, so it needs Chrome/Edge
+and a secure context (localhost counts). Firmware artifacts are fetched from
+`packages/web/public/artifacts/` (a manifest + images, supplied separately).

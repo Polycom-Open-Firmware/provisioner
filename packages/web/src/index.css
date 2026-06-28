@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Polycom "workshop" design tokens (Conversation & Design Notes.md). */
+:root {
+  --background: #ffffff;
+  --foreground: #1c1a17;
+  --body: #4a443b;
+  --muted: #8a857c;
+  --border: #ece8e0;
+  --backdrop: #e7e3da;
+  --rail: #f6f4ef;
+  --primary: #e8590c;
+  --primary-hover: #d24f08;
+  --primary-tint: #fbe6d8;
+  --primary-tint-2: #fdf3e3;
+  --primary-foreground: #ffffff;
+  --console-bg: #16130f;
+  --console-fg: #cfcabf;
+  --console-ts: #5c554a;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-backdrop font-sans text-foreground antialiased;
+    margin: 0;
+  }
+}
+
+/* Dotted-grid backdrop the app window floats on. */
+.backdrop-dots {
+  background-image: radial-gradient(circle, rgba(28, 26, 23, 0.06) 1px, transparent 1px);
+  background-size: 18px 18px;
+}

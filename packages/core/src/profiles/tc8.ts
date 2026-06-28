@@ -38,6 +38,7 @@ export function tc8Profile(): Device {
   return {
     id: "tc8",
     name: "Polycom TC8",
+    filters: TC8_FILTERS,
     flows: [
       unlockFlow(),
       reinstallLinuxFlow(),

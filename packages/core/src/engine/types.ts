@@ -3,7 +3,7 @@
 // is an ordered list of steps of four kinds — info / confirm / action / done. The
 // UI renders these generically (rail + content + footer) and subscribes to the
 // engine's event stream; it never imports a transport or a protocol.
-import type { Backend } from "../transport/transport";
+import type { Backend, UsbFilter } from "../transport/transport";
 import type { Fastboot } from "../protocol/fastboot";
 import type { UBootConsole } from "../protocol/uboot-console";
 
@@ -60,6 +60,7 @@ export interface Device {
   id: string;
   name: string;
   /** Browser USB filters that identify this device in fastboot mode. */
+  filters?: UsbFilter[];
   flows: Flow[];
 }
 
