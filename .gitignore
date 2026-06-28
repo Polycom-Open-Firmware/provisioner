@@ -19,3 +19,6 @@ packages/web/public/artifacts
 
 # Tauri-generated schemas (regenerated per build)
 packages/native/src-tauri/gen/
+
+# local secrets
+.secrets
