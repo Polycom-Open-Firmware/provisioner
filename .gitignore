@@ -16,3 +16,6 @@ packages/web/public/artifacts
 
 # Agent worktrees / local session dirs
 .claude/
+
+# Tauri-generated schemas (regenerated per build)
+packages/native/src-tauri/gen/
