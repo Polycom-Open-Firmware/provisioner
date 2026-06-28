@@ -22,6 +22,20 @@ export type { RunnerOptions } from "./engine/runner";
 // Flows
 export { unlockFlow } from "./flow/unlock";
 export { reinstallLinuxFlow, osInstallSteps } from "./flow/reinstall-linux";
+export { configureFlow } from "./flow/configure";
+
+// Config (the autoconfigure `cache` blob — see tc8-firmware-build/CONFIG-PARTITION.md)
+export {
+  buildConfigBlob,
+  buildConfigBlobFromLines,
+  configFieldsToLines,
+  configStore,
+  CONFIG_KEYS,
+  CONFIG_MAGIC,
+  CONFIG_PARTITION,
+  CONFIG_MAX_PAYLOAD,
+} from "./config/blob";
+export type { ConfigKey, ConfigFields } from "./config/blob";
 
 // Profiles
 export {

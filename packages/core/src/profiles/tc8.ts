@@ -10,6 +10,7 @@ import type { UsbFilter } from "../transport/transport";
 import type { Device } from "../engine/types";
 import { unlockFlow } from "../flow/unlock";
 import { reinstallLinuxFlow } from "../flow/reinstall-linux";
+import { configureFlow } from "../flow/configure";
 
 /** Browser USB filters that match the TC8 in fastboot mode (stage-2 + stock). */
 export const TC8_FILTERS: UsbFilter[] = [
@@ -42,13 +43,7 @@ export function tc8Profile(): Device {
     flows: [
       unlockFlow(),
       reinstallLinuxFlow(),
-      {
-        id: "reconfigure",
-        title: "Reconfigure",
-        summary: "Adjust device settings.",
-        soon: true,
-        steps: [],
-      },
+      configureFlow(),
     ],
   };
 }
