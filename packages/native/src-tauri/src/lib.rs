@@ -279,7 +279,14 @@ fn serial_open(baud_rate: u32, path: Option<String>, state: State<SerialState>) 
     let port = serialport::new(&path, baud_rate)
         .timeout(Duration::from_millis(50))
         .open()
-        .map_err(|e| format!("open {path}: {e}"))?;
+        .map_err(|e| {
+            let lm = e.to_string().to_lowercase();
+            if lm.contains("denied") || lm.contains("in use") || lm.contains("busy") || lm.contains("access") {
+                format!("Port {path} is in use — close any program using it (PuTTY, a serial monitor, etc.) and try again.")
+            } else {
+                format!("Couldn't open {path}: {e}")
+            }
+        })?;
 
     // A reader thread buffers bytes; serial_read drains them (mirrors the web read
     // loop so core's readUntil works the same).
