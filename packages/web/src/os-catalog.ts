@@ -14,7 +14,7 @@ import { HttpArtifacts } from "@/artifacts";
 // The Cloudflare Pages deployment (serves this SPA + functions/releases +
 // functions/artifact). Same-origin for the hosted web app, cross-origin (CORS) for
 // native — one path either way.
-const PROXY = "https://wizzard.openpolycom.cc";
+const PROXY = "https://wizard.openpolycom.cc";
 
 export interface OsBuild {
   tag: string;
