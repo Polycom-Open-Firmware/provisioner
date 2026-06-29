@@ -16,6 +16,7 @@ import {
   configFieldsToLines,
   configStore,
 } from "../config/blob";
+import { ensurePartitionTable } from "./partitions";
 
 async function runApply(ctx: FlowContext): Promise<void> {
   await ctx.connectUsb();
@@ -23,6 +24,10 @@ async function runApply(ctx: FlowContext): Promise<void> {
   // identify — confirms we're talking to the unit's fastboot (also sets maxDownload).
   const id = await ctx.fb.identify();
   ctx.log("device: " + (id["product"] ?? "?") + "   serial=" + (id["serialno"] ?? "?"));
+
+  // Don't touch the filesystem if the partition table is borked — refuse and tell
+  // the operator to run an install (which repairs it). We do NOT fix here.
+  await ensurePartitionTable(ctx, { fix: false });
 
   // Build the blob from the operator's draft. Blank fields are skipped, so the
   // device keeps its current value for anything left empty.

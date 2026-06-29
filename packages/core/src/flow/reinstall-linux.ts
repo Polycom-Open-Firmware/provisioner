@@ -11,6 +11,7 @@ import {
   configFieldsToLines,
   configStore,
 } from "../config/blob";
+import { ensurePartitionTable } from "./partitions";
 
 const SLOT = "a"; // "replace stock": overwrite boot_a/dtbo_a/vbmeta_a + userdata
 
@@ -22,6 +23,9 @@ async function runFlash(ctx: FlowContext): Promise<void> {
   ctx.log("device: " + (id["product"] ?? "?") + "   max-download-size=" + (id["max-download-size"] ?? "?"));
   if (!ctx.fb.maxDownload)
     throw new Error("device did not report max-download-size; cannot sparse-flash");
+
+  // Repair the partition table first if it's been nuked — no serial, no brick.
+  await ensurePartitionTable(ctx, { fix: true });
 
   const man = await ctx.artifacts.manifest("os-manifest.json");
 
