@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // sparse.ts — Android sparse image RESPARSE + flash over fastboot. Ported from
 // the pathfinder `provision-tool/src/sparse.js` (pure DataView/Uint8Array logic,
 // no platform calls — it only drives a Fastboot instance).

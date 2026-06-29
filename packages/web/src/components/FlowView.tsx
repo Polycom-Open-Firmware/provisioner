@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // Screen 3: the guided step frame — flush-left step rail, white content region,
 // footer bar pinned to the bottom (the "Sphinx docs" layout from the notes).
 import { useWizard } from "@/lib/wizard";

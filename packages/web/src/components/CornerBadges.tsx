@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // CornerBadges — stamps along the bottom of the device picker: a "use the native
 // app" prompt on the left (web only — pointless inside the app), and "view source"
 // + "support me" on the right. Tasteful pills; all open in a new tab.

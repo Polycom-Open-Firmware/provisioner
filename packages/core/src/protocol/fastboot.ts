@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // fastboot.ts — fastboot protocol over an injected UsbTransport. Ported from the
 // pathfinder `provision-tool/src/fastboot.js`; the WebUSB calls are gone — this
 // class only ever touches `usb.bulkOut/bulkIn`, so the SAME code runs on the web

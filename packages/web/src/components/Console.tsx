@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // Persistent right-docked console (Conversation & Design Notes.md, step 8):
 // timestamped, a live dot while an action runs, streams across the whole flow,
 // collapsible to a thin rail. Fed purely by the runner's "console" events.

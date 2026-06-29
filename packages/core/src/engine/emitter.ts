@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // emitter.ts — a tiny typed event emitter. The wizard UI subscribes to these
 // events to render progress, the console pane, and step transitions; nothing in
 // the UI reaches into the runner's internals.

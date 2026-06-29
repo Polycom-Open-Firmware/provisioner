@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // tc8.ts — the Polycom TC8 device profile. A profile is the thin, device-specific
 // module that names the flows and carries the device's layout facts; the engine
 // underneath is generic. Adding another device = another file like this one.

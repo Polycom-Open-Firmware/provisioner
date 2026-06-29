@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // wizard.tsx — the wiring. Owns a single WizardRunner (constructed with the web
 // Backend + an HTTP artifact source), subscribes to its event stream, and
 // projects it into React state. Components read `useWizard()`; none of them ever

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // backend.ts — the native Backend factory + a Tauri runtime probe. The same SPA
 // bundle ships in both flavors; at startup it picks this backend when running
 // inside the Tauri webview, otherwise the web (WebUSB) backend.

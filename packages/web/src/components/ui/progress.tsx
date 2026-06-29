@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 import { cn } from "@/lib/utils";
 
 export function Progress({ value = 0, className }: { value?: number; className?: string }) {

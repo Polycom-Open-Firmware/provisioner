@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // transport.ts — the seam. This is the ONLY contract that differs between the
 // web flavor (WebUSB / Web Serial) and the native flavor (Tauri invoke() → Rust
 // nusb / serialport). Everything above this line (protocols, flows, profiles,

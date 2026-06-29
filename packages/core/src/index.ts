@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // @provisioner/core — transport-agnostic provisioning engine. A UI shell injects
 // a Backend (web: WebUSB/Serial; native: Tauri → Rust) and an Artifacts source,
 // constructs a WizardRunner, and drives a device profile's flows. No file in this

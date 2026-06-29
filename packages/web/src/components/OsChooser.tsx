@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // OsChooser — lists the available OS builds (tc8-firmware-build GitHub releases,
 // plus the temporary local artifacts in local dev) and lets the operator pick
 // one. Picking swaps the artifact source and advances.

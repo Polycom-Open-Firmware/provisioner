@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // A self-paced, step-through slideshow (e.g. disassembly photos). Manual prev/next
 // + clickable progress dots + a counter. Driven by a step's `gallery` urls.
 import * as React from "react";

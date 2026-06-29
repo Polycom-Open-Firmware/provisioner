@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // Footer bar: step counter (mono) + Back (borderless) + the primary button whose
 // label/behavior depends on the current step type. Back is disabled while an
 // action runs and is hidden from re-entering a just-completed action step.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 //! Native (Tauri) backend for the Open Polycom provisioner.
 //!
 //! Implements core's `UsbTransport` / `SerialTransport` contracts (see

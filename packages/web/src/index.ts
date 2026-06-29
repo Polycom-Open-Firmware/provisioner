@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // @provisioner/web — the web flavor's platform adapter: WebUSB + Web Serial
 // transports, an HTTP artifact source, and the Backend factory the UI injects
 // into core's WizardRunner. (React/shadcn UI lands on top of this next.)

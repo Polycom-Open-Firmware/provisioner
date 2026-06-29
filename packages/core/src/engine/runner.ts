@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // runner.ts — drives one Flow through its steps and emits events the wizard UI
 // renders. The UI calls next()/back()/confirm(); `action` steps auto-run on
 // entry. USB/serial selection must originate from a real user click, so the UI

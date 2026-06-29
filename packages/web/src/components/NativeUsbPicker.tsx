@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // NativeUsbPicker — desktop has no browser USB chooser. With exactly one matching
 // device we just connect it; with several we list them so the operator can pick.
 import * as React from "react";

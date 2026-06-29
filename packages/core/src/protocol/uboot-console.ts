@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // uboot-console.ts — drive the stock U-Boot console over an injected
 // SerialTransport. Ported from the prompt-handling in the pathfinder
 // `provision-tool/src/enroll.js` (catchPrompt/uCmd) + serial.js semantics. The

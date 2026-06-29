@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // Cloudflare Pages Function — the single artifact path for every flavor. Streams a
 // tc8-firmware-build release asset from GitHub (server-side, dodging the asset's
 // missing CORS) and adds `access-control-allow-origin: *` so the cross-origin fetch

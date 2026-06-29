@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // The content region. Renders per step type: info/confirm copy (+ placeholder
 // asset blocks for serial/USB gestures), the action progress bar (detailed log
 // streams to the Console), the done success block, and any error surface.

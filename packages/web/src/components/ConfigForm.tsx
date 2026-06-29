@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // ConfigForm — the operator-input UI for the Configure flow's "settings" step.
 // Self-contained, the same way NativeSerialPicker is: it calls useWizard() (to dim
 // while busy) and writes the operator's values into the shared config draft in

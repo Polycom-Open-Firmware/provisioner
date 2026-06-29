@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // blob.ts — build the TC8 autoconfigure "cache" config blob, and hold the
 // operator's draft so the UI and the flow share one source of truth.
 //

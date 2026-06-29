@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // Screen 2: "What do you want to do?" — lists the device's flows (Unlock /
 // Reinstall Linux / Reconfigure[Soon]).
 import { ChevronRight } from "lucide-react";

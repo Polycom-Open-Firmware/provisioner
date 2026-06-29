@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // os-catalog.ts — the OS chooser's data + the artifact source.
 //
 // ONE path for everyone: native AND hosted web fetch through the Cloudflare proxy

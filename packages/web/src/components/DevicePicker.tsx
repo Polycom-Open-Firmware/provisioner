@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // Screen 1: "Pick your device". Also surfaces the Chromium/secure-context gate —
 // WebUSB + Web Serial only exist there, and the device must be WinUSB-bound.
 import { AlertTriangle } from "lucide-react";

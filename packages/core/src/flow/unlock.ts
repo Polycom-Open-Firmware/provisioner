@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // unlock.ts — the "Unlock" flow (design notes: 7 steps). One-shot enrollment of
 // a fresh TC8: installs our stage-2 bootloader into the eMMC boot1 HW partition
 // and sets up chainloading, leaving the unit's partitions otherwise pristine.

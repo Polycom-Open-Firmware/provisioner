@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // usb.ts — native (Tauri) implementation of core's UsbTransport. The web half
 // uses WebUSB; this half forwards every call to the Rust backend over Tauri IPC
 // (nusb under the hood), so the same fastboot protocol code runs unchanged.

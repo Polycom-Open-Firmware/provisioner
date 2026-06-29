@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // serial.ts — native (Tauri) implementation of core's SerialTransport. The Rust
 // backend runs a reader thread that buffers incoming bytes; readUntil polls
 // `serial_read` to drain that buffer, mirroring the web adapter's buffering so the

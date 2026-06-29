@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // partitions.ts — verify (and, when allowed, restore) the eMMC GPT over fastboot,
 // no serial. A nuked partition table is detected by asking the bootloader for a
 // couple of known partitions: it only enumerates partitions that exist in the GPT,

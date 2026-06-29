@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // artifacts.ts — web Artifacts source: fetch manifests + firmware images over
 // HTTP, relative to a base URL (default ./artifacts/). The native flavor will
 // implement the same interface against the local filesystem / a bundled library.

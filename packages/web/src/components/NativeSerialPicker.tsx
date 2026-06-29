@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // NativeSerialPicker — desktop has no browser serial chooser. With exactly one
 // port we just connect it (no chooser); with several we list them so the operator
 // can resolve which is the device.

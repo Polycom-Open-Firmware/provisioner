@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // types.ts — the wizard's data model. Shaped to match the Polycom Wizard design
 // (see "Conversation & Design Notes.md"): a device exposes named flows; each flow
 // is an ordered list of steps of four kinds — info / confirm / action / done. The

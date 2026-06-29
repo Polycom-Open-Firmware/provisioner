@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // backend.ts — the web Backend factory. A UI shell calls webBackend() and hands
 // it (plus an Artifacts source) to a WizardRunner; everything above is shared.
 import type { Backend, UsbTransport, SerialTransport } from "@provisioner/core";

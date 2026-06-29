@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // serial.ts — Web Serial implementation of core's SerialTransport. Ported from
 // the pathfinder `provision-tool/src/serial.js` (SerialLink). Chromium only,
 // secure context. The native flavor provides the same interface over the Rust

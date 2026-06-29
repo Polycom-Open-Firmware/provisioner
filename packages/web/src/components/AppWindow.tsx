@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // AppWindow — on web, the wizard floats in a balenaEtcher-style fake window
 // (traffic-light titlebar on a dotted backdrop) because it lives in a browser
 // tab. Native (Tauri) is already a real OS window, so we drop that chrome and

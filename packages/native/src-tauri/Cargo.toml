@@ -4,6 +4,7 @@ version = "0.2.0"
 description = "Open Polycom Provisioner"
 authors = ["Polycom Open Firmware"]
 edition = "2021"
+license = "GPL-2.0-or-later"
 
 [lib]
 name = "provisioner_lib"

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // Device id -> bundled product image (web asset in public/). Kept in the UI, not
 // core, since asset URLs are a web-only concern. `scale` matches differently-framed
 // product shots to each other (TC8's is tighter, so shrink it to ~match the C60).

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 import { Check } from "lucide-react";
 import { useWizard } from "@/lib/wizard";
 import { cn } from "@/lib/utils";

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // Cloudflare Pages Function — the OS list, proxied so every flavor uses the same
 // origin. Unauthenticated GitHub API calls from Cloudflare's shared egress IPs get
 // rate-limited intermittently, so we layer three defenses:

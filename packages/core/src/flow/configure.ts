@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // configure.ts — the "Configure" flow (design notes: the Reconfigure path). Pushes
 // device settings to an already-installed TC8 by writing a small config blob to the
 // stock `cache` GPT partition over fastboot; a boot-time service on the device

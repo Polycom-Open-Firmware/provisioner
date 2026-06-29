@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // reinstall-linux.ts — the "Reinstall Linux" flow (design notes: 4 steps). Loads
 // Debian onto an already-unlocked TC8 and reboots into it. Ported from the
 // pathfinder `provision-tool/src/flashos.js`: flashes the Android-format slot

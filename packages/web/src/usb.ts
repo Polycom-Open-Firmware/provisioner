@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 // usb.ts — WebUSB implementation of core's UsbTransport. This is the web half of
 // the seam: all the `navigator.usb` calls that used to live inside the pathfinder
 // Fastboot class now live here, behind the interface, so core stays platform-free.
