@@ -1,6 +1,11 @@
-// CornerBadges — small "view source" + "support me" stamps for the device-picker
-// corner. Tasteful pills; both open in a new tab.
+// CornerBadges — stamps along the bottom of the device picker: a "use the native
+// app" prompt on the left (web only — pointless inside the app), and "view source"
+// + "support me" on the right. Tasteful pills; all open in a new tab.
+import { Download } from "lucide-react";
+import { isTauri } from "@/native/backend";
+
 const GITHUB_URL = "https://github.com/Polycom-Open-Firmware";
+const RELEASES_URL = "https://github.com/Polycom-Open-Firmware/provisioner/releases";
 const KOFI_URL = "https://ko-fi.com/retrogrademarmalade";
 
 const PILL =
@@ -30,15 +35,33 @@ function KofiCup({ className }: { className?: string }) {
 
 export function CornerBadges() {
   return (
-    <div className="absolute bottom-5 right-5 flex items-center gap-2">
-      <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" title="View source on GitHub" className={PILL}>
-        <GithubMark className="h-3.5 w-3.5" />
-        <span>View source code</span>
-      </a>
-      <a href={KOFI_URL} target="_blank" rel="noopener noreferrer" title="Support on Ko-fi" className={PILL}>
-        <KofiCup className="h-3.5 w-3.5" />
-        <span>Help me fund the purchase of more ewaste</span>
-      </a>
+    <div className="absolute bottom-5 left-5 right-5 flex items-center justify-between">
+      {/* left slot — empty in the native app so the right pills stay put */}
+      <div>
+        {!isTauri() && (
+          <a
+            href={RELEASES_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Download the desktop app"
+            className={PILL}
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Use the native app</span>
+          </a>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" title="View source on GitHub" className={PILL}>
+          <GithubMark className="h-3.5 w-3.5" />
+          <span>View source code</span>
+        </a>
+        <a href={KOFI_URL} target="_blank" rel="noopener noreferrer" title="Support on Ko-fi" className={PILL}>
+          <KofiCup className="h-3.5 w-3.5" />
+          <span>Help me fund the purchase of more ewaste</span>
+        </a>
+      </div>
     </div>
   );
 }
