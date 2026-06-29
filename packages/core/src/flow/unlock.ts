@@ -59,6 +59,17 @@ export function unlockFlow(): Flow {
       },
       chooseOsStep(),
       {
+        id: "settings",
+        type: "confirm",
+        rail: "Settings",
+        title: "Choose what to apply",
+        body:
+          "Set the values you want this device to start with. Anything you leave blank is left " +
+          "at its default. These are written during install and applied on first boot. When " +
+          "you're ready, press Continue.",
+        confirmLabel: "Continue",
+      },
+      {
         id: "disassembly",
         type: "info",
         rail: "Open the case",
@@ -182,7 +193,7 @@ export function unlockFlow(): Flow {
         id: "trap",
         type: "action",
         rail: "Reboot to fastboot",
-        title: "Trapping the bootloader in fastboot",
+        title: "Connecting to Unlocked Bootloader",
         body:
           "Rebooting into the new bootloader and catching it before it can boot, so " +
           "the device never lands in the old, broken stock OS.",

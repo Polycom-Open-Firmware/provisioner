@@ -5,7 +5,7 @@ import { useWizard } from "@/lib/wizard";
 import { Badge } from "@/components/ui/badge";
 import { webSupport } from "@/backend";
 import { DEVICE_IMAGES } from "@/lib/devices";
-import { KofiBadge } from "./KofiBadge";
+import { CornerBadges } from "./CornerBadges";
 
 function UnsupportedBanner({ sup }: { sup: ReturnType<typeof webSupport> }) {
   const missing = [
@@ -79,7 +79,7 @@ export function DevicePicker() {
         </div>
       </div>
 
-      <KofiBadge />
+      <CornerBadges />
     </div>
   );
 }

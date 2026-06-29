@@ -30,7 +30,7 @@ export function Footer() {
       : step.type === "confirm"
         ? step.confirmLabel ?? "Continue"
         : step.type === "done"
-          ? "Start over"
+          ? "Back to devices"
           : "Working…";
   const primaryDisabled = isAction || running || busy;
 

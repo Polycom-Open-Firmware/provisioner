@@ -5,6 +5,12 @@
 // Android sparse protocol, sets the active slot, and reboots.
 import { flashSparse, parseSparse, planResparse } from "../protocol/sparse";
 import type { Flow, FlowContext, Step } from "../engine/types";
+import {
+  CONFIG_PARTITION,
+  buildConfigBlob,
+  configFieldsToLines,
+  configStore,
+} from "../config/blob";
 
 const SLOT = "a"; // "replace stock": overwrite boot_a/dtbo_a/vbmeta_a + userdata
 
@@ -58,6 +64,23 @@ async function runFlash(ctx: FlowContext): Promise<void> {
   base += sparseTotal;
   ctx.progress(grandTotal, grandTotal);
   ctx.log("  userdata OK");
+
+  // If the operator supplied settings (the Unlock flow's config page), write the
+  // config blob to the `cache` partition in this same fastboot session so the
+  // boot-time reader applies it on first boot — no second fastboot trip. The
+  // standalone Reinstall flow has no config page, so the store is empty there and
+  // this is skipped. Blank fields are omitted from the blob (defaults kept).
+  const cfgFields = configStore.snapshot();
+  const cfgKeys = configFieldsToLines(cfgFields).filter((l) => !l.startsWith("#"));
+  if (cfgKeys.length) {
+    const blob = await buildConfigBlob(cfgFields);
+    ctx.log(
+      "flashing " + CONFIG_PARTITION + " config blob (" + blob.byteLength + " B, " +
+        cfgKeys.length + " setting(s))...",
+    );
+    await ctx.fb.flash(CONFIG_PARTITION, blob, undefined, info);
+    ctx.log("  " + CONFIG_PARTITION + " OK");
+  }
 
   // make the slot active + reboot into Debian.
   ctx.log("set_active " + SLOT);
