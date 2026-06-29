@@ -19,8 +19,13 @@ export async function onRequest({ request, env }) {
 
   const cache = caches.default;
   const cacheKey = new Request(new URL(request.url).origin + "/releases");
-  const hit = await cache.match(cacheKey);
-  if (hit) return hit;
+  // `?fresh` (the in-app refresh button) bypasses the edge cache for an on-demand
+  // pull; normal loads serve the shared cache. Either way we refresh the cache.
+  const bypass = new URL(request.url).searchParams.has("fresh");
+  if (!bypass) {
+    const hit = await cache.match(cacheKey);
+    if (hit) return hit;
+  }
 
   const headers = {
     accept: "application/vnd.github+json",
@@ -43,7 +48,7 @@ export async function onRequest({ request, env }) {
   // check skips them (and we don't cache a rate-limit error for 10 minutes).
   const resp = new Response(body, {
     status: ok ? 200 : 502,
-    headers: { ...CORS, "content-type": "application/json", "cache-control": "public, max-age=600" },
+    headers: { ...CORS, "content-type": "application/json", "cache-control": "public, max-age=180" },
   });
   if (ok) await cache.put(cacheKey, resp.clone());
   return resp;

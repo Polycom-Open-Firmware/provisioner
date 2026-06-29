@@ -12,18 +12,19 @@ export function OsChooser() {
   const [builds, setBuilds] = React.useState<OsBuild[] | null>(null);
   const [err, setErr] = React.useState<string | null>(null);
 
-  const refresh = React.useCallback(async () => {
+  const refresh = React.useCallback(async (fresh = false) => {
     setBuilds(null);
     setErr(null);
     try {
-      setBuilds(await listOsBuilds());
+      setBuilds(await listOsBuilds(fresh));
     } catch (e) {
       setErr((e as Error).message);
     }
   }, []);
 
+  // initial load uses the cached list; the refresh button forces a fresh pull
   React.useEffect(() => {
-    void refresh();
+    void refresh(false);
   }, [refresh]);
 
   return (
@@ -33,7 +34,7 @@ export function OsChooser() {
           OS builds
         </div>
         <button
-          onClick={refresh}
+          onClick={() => refresh(true)}
           className="flex items-center gap-1 font-mono text-[11px] text-muted hover:text-foreground"
         >
           <RefreshCw className="h-3 w-3" /> refresh

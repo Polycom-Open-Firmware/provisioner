@@ -30,14 +30,18 @@ function isLocalDev(): boolean {
   return h === "localhost" || h === "127.0.0.1" || h === "";
 }
 
-/** OS builds to offer: the GitHub releases (via the proxy) + the temp one in dev. */
-export async function listOsBuilds(): Promise<OsBuild[]> {
+/**
+ * OS builds to offer: the GitHub releases (via the proxy) + the temp one in dev.
+ * `fresh` bypasses the proxy's edge cache + the browser cache for an on-demand
+ * pull (the chooser's refresh button); normal loads use the cached list.
+ */
+export async function listOsBuilds(fresh = false): Promise<OsBuild[]> {
   const builds: OsBuild[] = [];
   if (isLocalDev()) {
     builds.push({ tag: "local", name: "Local dev artifacts", prerelease: false, local: true });
   }
   try {
-    const r = await fetch(`${PROXY}/releases`);
+    const r = await fetch(`${PROXY}/releases${fresh ? "?fresh=1" : ""}`, fresh ? { cache: "no-store" } : undefined);
     if (r.ok) {
       const releases = (await r.json()) as Array<{
         tag_name: string;
