@@ -50,7 +50,7 @@ function GestureHint({ gesture }: { gesture: Gesture }) {
 }
 
 export function StepContent() {
-  const { currentStep, progress, running, error } = useWizard();
+  const { currentStep, progress, running, error, lines } = useWizard();
   const step = currentStep;
   if (!step) return null;
 
@@ -103,7 +103,9 @@ export function StepContent() {
             )}
           </div>
           <Progress value={pct} />
-          <p className="mt-3 text-xs text-muted">Detailed output streams in the console on the right.</p>
+          <p className="mt-3 truncate font-mono text-xs text-muted">
+            {lines[lines.length - 1]?.msg ?? "Working…"}
+          </p>
         </div>
       )}
 

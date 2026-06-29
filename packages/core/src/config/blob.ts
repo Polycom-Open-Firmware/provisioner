@@ -89,6 +89,48 @@ export function buildConfigBlob(fields: ConfigFields): Promise<Uint8Array> {
   return buildConfigBlobFromLines(configFieldsToLines(fields));
 }
 
+// --- bootloader update (rides the same cache write) --------------------------
+// Contract: tc8-firmware-build/BOOTLOADER-UPDATE.md. The wizard never writes the
+// eMMC boot1 HW partition directly; it stages the stage-2 image in `cache` (at
+// 1 MiB, after the config blob) and the running OS flashes boot1 on the next boot
+// (sha256-verified, idempotent, can't brick — boot0 is untouched).
+
+/** ASCII magic at 1 MiB — the on-device updater gates on this; absent → no-op. */
+export const BOOTLOADER_MAGIC = "TC8BOOT1";
+const BL_HDR_OFFSET = 1 << 20; // 0x100000 — bootloader header sector
+const BL_IMG_OFFSET = BL_HDR_OFFSET + 512; // 0x100200 — image, next sector
+
+/**
+ * Build the full `cache` image: the config blob at offset 0, and — when `stage2`
+ * is supplied — the bootloader update blob (64-byte `TC8BOOT1` header at 1 MiB:
+ * magic | len u32 LE | sha256(image) | reserved; the image at 1 MiB + 512). With
+ * no `stage2` this is byte-identical to {@link buildConfigBlobFromLines}, so the
+ * config-only path is unchanged. The two on-device services read independently —
+ * apply-config at offset 0, the bootloader updater at 1 MiB.
+ */
+export async function buildCacheImage(
+  lines: string[],
+  stage2?: Uint8Array | null,
+): Promise<Uint8Array> {
+  const config = await buildConfigBlobFromLines(lines);
+  if (!stage2 || stage2.byteLength === 0) return config;
+  if (config.byteLength > BL_HDR_OFFSET)
+    throw new Error("config blob overlaps the 1 MiB bootloader offset");
+
+  const enc = new TextEncoder();
+  const sha = new Uint8Array(await crypto.subtle.digest("SHA-256", new Uint8Array(stage2)));
+  const blHdr = new Uint8Array(64);
+  blHdr.set(enc.encode(BOOTLOADER_MAGIC), 0);
+  new DataView(blHdr.buffer).setUint32(8, stage2.byteLength, true);
+  blHdr.set(sha, 12);
+
+  const buf = new Uint8Array(BL_IMG_OFFSET + stage2.byteLength);
+  buf.set(config, 0);
+  buf.set(blHdr, BL_HDR_OFFSET);
+  buf.set(stage2, BL_IMG_OFFSET);
+  return buf;
+}
+
 /**
  * Module-singleton config draft. The Configure flow (core) and the operator-input
  * UI (web `ConfigForm`) share this so the flow never imports React and the UI never

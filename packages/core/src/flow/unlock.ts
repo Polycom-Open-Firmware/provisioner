@@ -130,8 +130,9 @@ export function unlockFlow(): Flow {
         rail: "Connect USB",
         title: "Connect over USB",
         body:
-          "The device is now in fastboot. Connect it to this computer over USB, then press " +
-          "Continue and choose it from the list.",
+          "The device is now in programming mode, ready to receive the new unlocked " +
+          "bootloader. Connect it to this computer over USB, then press Continue and " +
+          "choose it from the list.",
         confirmLabel: "Continue",
         gesture: "connect-usb",
       },
@@ -193,10 +194,10 @@ export function unlockFlow(): Flow {
         id: "trap",
         type: "action",
         rail: "Reboot to fastboot",
-        title: "Connecting to Unlocked Bootloader",
+        title: "Catching it before it reboots",
         body:
-          "Rebooting into the new bootloader and catching it before it can boot, so " +
-          "the device never lands in the old, broken stock OS.",
+          "Putting the device into programming mode again with the new bootloader, to " +
+          "prepare it for the OS install.",
         run: async (ctx) => {
           // Reboot. Stock stage-1 chainloads stage-2 — we must LET that happen, then
           // interrupt stage-2's 3 s autoboot before it runs `boota`: on a stock unit
@@ -224,8 +225,8 @@ export function unlockFlow(): Flow {
       },
       ...osInstallSteps(
         "os",
-        "The device is now in fastboot. Connect it over USB, then press Continue and " +
-          "choose it from the list.",
+        "The new bootloader is ready to receive an operating system. Connect it over " +
+          "USB, then press Continue and choose it from the list.",
       ),
     ],
   };

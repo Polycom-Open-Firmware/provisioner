@@ -27,10 +27,10 @@ export function Console() {
       <button
         onClick={() => setOpen(true)}
         className="flex w-9 shrink-0 flex-col items-center gap-2 border-l border-border bg-console py-3 text-console-fg"
-        title="Show console"
+        title="Show Status Log"
       >
         <Terminal className="h-4 w-4" />
-        <span className="font-mono text-[11px] tracking-widest [writing-mode:vertical-rl]">CONSOLE</span>
+        <span className="font-mono text-[11px] tracking-widest [writing-mode:vertical-rl]">STATUS LOG</span>
       </button>
     );
   }
@@ -40,9 +40,9 @@ export function Console() {
       <div className="flex h-10 shrink-0 items-center justify-between px-3">
         <div className="flex items-center gap-2 font-mono text-xs text-console-fg">
           <span className={cn("h-[7px] w-[7px] rounded-full", running ? "animate-pulse bg-primary" : "bg-console-ts")} />
-          console
+          Status Log
         </div>
-        <button onClick={() => setOpen(false)} className="text-console-ts hover:text-console-fg" title="Hide console">
+        <button onClick={() => setOpen(false)} className="text-console-ts hover:text-console-fg" title="Hide Status Log">
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
