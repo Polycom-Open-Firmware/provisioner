@@ -5,6 +5,7 @@ import { useWizard } from "@/lib/wizard";
 import { Badge } from "@/components/ui/badge";
 import { webSupport } from "@/backend";
 import { DEVICE_IMAGES } from "@/lib/devices";
+import { KofiBadge } from "./KofiBadge";
 
 function UnsupportedBanner({ sup }: { sup: ReturnType<typeof webSupport> }) {
   const missing = [
@@ -31,7 +32,7 @@ export function DevicePicker() {
   const unsupported = !sup.usb || !sup.serial || !sup.secure;
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8 p-10">
+    <div className="relative flex flex-1 flex-col items-center justify-center gap-8 p-10">
       <div className="text-center">
         <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
           Open Polycom
@@ -77,6 +78,8 @@ export function DevicePicker() {
           </div>
         </div>
       </div>
+
+      <KofiBadge />
     </div>
   );
 }
