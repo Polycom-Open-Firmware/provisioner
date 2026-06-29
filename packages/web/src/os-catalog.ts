@@ -1,25 +1,20 @@
-// os-catalog.ts — the OS chooser's data + the per-flavor artifact source.
+// os-catalog.ts — the OS chooser's data + the artifact source.
 //
-// The OS list comes from tc8-firmware-build's GitHub releases (the API IS
-// CORS-enabled, so it works in every flavor). The image bytes differ by flavor:
-//   - native (Tauri): GitHub release asset, fetched Rust-side (no CORS)
-//   - web hosted:     same-origin /artifact/<tag>/<asset> Cloudflare Pages fn
-//   - web local dev:  the temporary ./artifacts/ files
+// ONE path for everyone: native AND hosted web fetch through the Cloudflare proxy
+// (openpolycom.cc) — the release list via /releases, the image bytes via
+// /artifact/<tag>/<asset>. The proxy streams from GitHub server-side (dodging the
+// asset-CORS gap) and sends `access-control-allow-origin: *`, so the cross-origin
+// fetch works the same in the browser and the Tauri webview — no parallel paths,
+// no native HTTP plugin. Local dev additionally offers the temporary ./artifacts/
+// for testing builds that aren't released yet.
 import type { Artifacts } from "@provisioner/core";
 import { isTauri } from "@/native/backend";
 import { HttpArtifacts } from "@/artifacts";
 
-const REPO = "Polycom-Open-Firmware/tc8-firmware-build";
-// The asset names a release must carry to be a flashable OS build.
-const REQUIRED_ASSET = "rootfs.simg";
-
-export type Env = "native" | "web-hosted" | "web-local";
-
-export function currentEnv(): Env {
-  if (isTauri()) return "native";
-  const h = typeof location !== "undefined" ? location.hostname : "";
-  return h === "localhost" || h === "127.0.0.1" || h === "" ? "web-local" : "web-hosted";
-}
+// The Cloudflare Pages deployment (serves this SPA + functions/releases +
+// functions/artifact). Same-origin for the hosted web app, cross-origin (CORS) for
+// native — one path either way.
+const PROXY = "https://wizzard.openpolycom.cc";
 
 export interface OsBuild {
   tag: string;
@@ -29,19 +24,20 @@ export interface OsBuild {
   local?: boolean;
 }
 
-/** OS builds to offer. */
+function isLocalDev(): boolean {
+  if (isTauri()) return false;
+  const h = typeof location !== "undefined" ? location.hostname : "";
+  return h === "localhost" || h === "127.0.0.1" || h === "";
+}
+
+/** OS builds to offer: the GitHub releases (via the proxy) + the temp one in dev. */
 export async function listOsBuilds(): Promise<OsBuild[]> {
-  // Self-hosted debug build: keep serving the temporary local ./artifacts/ as
-  // before (the GitHub release assets would be CORS-blocked here anyway).
-  if (currentEnv() === "web-local") {
-    return [{ tag: "local", name: "Local dev artifacts", prerelease: false, local: true }];
-  }
-  // Native / hosted web: GitHub releases (their assets ARE fetchable in these flavors).
   const builds: OsBuild[] = [];
+  if (isLocalDev()) {
+    builds.push({ tag: "local", name: "Local dev artifacts", prerelease: false, local: true });
+  }
   try {
-    const r = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=20`, {
-      headers: { accept: "application/vnd.github+json" },
-    });
+    const r = await fetch(`${PROXY}/releases`);
     if (r.ok) {
       const releases = (await r.json()) as Array<{
         tag_name: string;
@@ -51,42 +47,25 @@ export async function listOsBuilds(): Promise<OsBuild[]> {
         assets: Array<{ name: string }>;
       }>;
       for (const rel of releases) {
-        if (rel.draft || !rel.assets?.some((a) => a.name === REQUIRED_ASSET)) continue;
+        if (rel.draft || !rel.assets?.some((a) => a.name === "rootfs.simg")) continue;
         builds.push({ tag: rel.tag_name, name: rel.name || rel.tag_name, prerelease: !!rel.prerelease });
       }
     }
   } catch {
-    /* offline / API error -> whatever local option we have */
+    /* proxy unreachable / offline -> whatever local option we have */
   }
   return builds;
 }
 
 /** The Artifacts source for a chosen build. */
 export function artifactsFor(build: OsBuild): Artifacts {
-  return build.local ? new HttpArtifacts("./artifacts/") : new GithubArtifacts(build.tag);
+  return build.local ? new HttpArtifacts("./artifacts/") : new ProxyArtifacts(build.tag);
 }
 
-// Synthetic manifests — the releases ship raw images, not manifest JSON, so we
-// map the well-known asset names to the flash targets here.
-class GithubArtifacts implements Artifacts {
-  private readonly env = currentEnv();
+// The releases ship raw images, not manifest JSON, so map the well-known asset
+// names to flash targets here; bytes come from the Cloudflare /artifact proxy.
+class ProxyArtifacts implements Artifacts {
   constructor(private readonly tag: string) {}
-
-  private assetUrl(name: string): string {
-    const f = name.replace(/^\.?\//, "");
-    if (this.env === "web-hosted") return `/artifact/${this.tag}/${f}`;
-    return `https://github.com/${REPO}/releases/download/${this.tag}/${f}`;
-  }
-
-  private async get(name: string): Promise<Uint8Array> {
-    const url = this.assetUrl(name);
-    // Native bypasses the webview's CORS via the Tauri HTTP layer (Rust-side).
-    const doFetch =
-      this.env === "native" ? (await import("@tauri-apps/plugin-http")).fetch : fetch;
-    const r = await doFetch(url);
-    if (!r.ok) throw new Error(`fetch ${name}: HTTP ${r.status}`);
-    return new Uint8Array(await r.arrayBuffer());
-  }
 
   async manifest(name: string): Promise<any> {
     if (name === "manifest.json") return { stage2: { url: "tc8-stage2-uboot.bin" } };
@@ -101,6 +80,9 @@ class GithubArtifacts implements Artifacts {
   }
 
   async binary(ref: string): Promise<Uint8Array> {
-    return this.get(ref);
+    const f = ref.replace(/^\.?\//, "");
+    const r = await fetch(`${PROXY}/artifact/${this.tag}/${f}`);
+    if (!r.ok) throw new Error(`fetch ${f}: HTTP ${r.status}`);
+    return new Uint8Array(await r.arrayBuffer());
   }
 }

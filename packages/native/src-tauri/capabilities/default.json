@@ -3,15 +3,5 @@
   "identifier": "default",
   "description": "Core permissions for the main window.",
   "windows": ["main"],
-  "permissions": [
-    "core:default",
-    {
-      "identifier": "http:default",
-      "allow": [
-        { "url": "https://github.com/*" },
-        { "url": "https://*.githubusercontent.com/*" },
-        { "url": "https://api.github.com/*" }
-      ]
-    }
-  ]
+  "permissions": ["core:default"]
 }
