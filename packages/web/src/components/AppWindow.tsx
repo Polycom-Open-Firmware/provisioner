@@ -21,7 +21,8 @@ function WizardBody() {
         {phase === "pick-flow" && <FlowPicker />}
         {phase === "in-flow" && <FlowView />}
       </section>
-      <Console />
+      {/* Status Log only matters during a procedure — hidden on the pickers. */}
+      {phase === "in-flow" && <Console />}
     </div>
   );
 }
