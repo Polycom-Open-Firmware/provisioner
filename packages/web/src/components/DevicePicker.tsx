@@ -9,6 +9,12 @@ import { webSupport } from "@/backend";
 import { DEVICE_IMAGES } from "@/lib/devices";
 import { CornerBadges } from "./CornerBadges";
 
+// "Coming soon" devices — not yet supported; shown dimmed with a Soon badge.
+const SOON = [
+  { name: "Polycom Trio C60", src: "/poly-c60.png" },
+  { name: "Polycom GC8", src: "/poly-gc8.png" },
+];
+
 function UnsupportedBanner({ sup }: { sup: ReturnType<typeof webSupport> }) {
   const missing = [
     !sup.usb && "WebUSB",
@@ -45,7 +51,7 @@ export function DevicePicker() {
 
       {unsupported && <UnsupportedBanner sup={sup} />}
 
-      <div className="grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
         {devices.map((d) => {
           const img = DEVICE_IMAGES[d.id];
           return (
@@ -70,15 +76,17 @@ export function DevicePicker() {
           );
         })}
 
-        <div className="flex flex-col items-center gap-3 rounded-[12px] p-5 text-center opacity-60">
-          <div className="flex h-28 w-full items-center justify-center">
-            <img src="/poly-c60.png" alt="Polycom Trio C60" className="max-h-28 max-w-full object-contain" />
+        {SOON.map((s) => (
+          <div key={s.name} className="flex flex-col items-center gap-3 rounded-[12px] p-5 text-center opacity-60">
+            <div className="flex h-28 w-full items-center justify-center">
+              <img src={s.src} alt={s.name} className="max-h-28 max-w-full object-contain" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[15px] font-semibold text-foreground">{s.name}</span>
+              <Badge>Soon</Badge>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[15px] font-semibold text-foreground">Polycom Trio C60</span>
-            <Badge>Soon</Badge>
-          </div>
-        </div>
+        ))}
       </div>
 
       <CornerBadges />
