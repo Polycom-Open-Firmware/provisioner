@@ -12,7 +12,6 @@ import { CornerBadges } from "./CornerBadges";
 // "Coming soon" devices — not yet supported; shown dimmed with a Soon badge.
 const SOON = [
   { name: "Polycom Trio C60", src: "/poly-c60.png" },
-  { name: "Polycom GC8", src: "/poly-gc8.png" },
 ];
 
 function UnsupportedBanner({ sup }: { sup: ReturnType<typeof webSupport> }) {
@@ -51,7 +50,7 @@ export function DevicePicker() {
 
       {unsupported && <UnsupportedBanner sup={sup} />}
 
-      <div className="grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
         {devices.map((d) => {
           const img = DEVICE_IMAGES[d.id];
           return (
