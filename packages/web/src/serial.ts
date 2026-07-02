@@ -17,11 +17,13 @@ export class WebSerialTransport implements SerialTransport {
   private rx = "";
   private cursor = 0;
   private run = false;
+  private openOpts = { baudRate: 115200 };
   // --- diagnostics (surfaced via debugInfo() into the Status Log) -------------
   private rxBytes = 0; // total raw bytes the read loop has pulled off RX
-  private loopState: "not-started" | "running" | "ended" = "not-started";
+  private loopState: "not-started" | "running" | "recovered" | "lost" | "ended" = "not-started";
   private loopErr: string | null = null; // a thrown error inside the read loop
   private signalState = "n/a"; // outcome of the DTR/RTS assertion on open
+  private reconnects = 0; // times we transparently reopened after a device loss
 
   get connected(): boolean {
     return !!this.port;
@@ -32,35 +34,40 @@ export class WebSerialTransport implements SerialTransport {
     return (
       "webserial: rx=" + this.rxBytes + "B, readLoop=" +
       (this.loopErr ? "ERROR " + this.loopErr : this.loopState) +
-      ", dtr/rts=" + this.signalState
+      ", reconnects=" + this.reconnects + ", dtr/rts=" + this.signalState
     );
   }
 
   async open(opts: { baudRate?: number; path?: string } = {}): Promise<void> {
     // `path` is native-only; the browser always prompts with its own chooser.
     this.port = await navigator.serial.requestPort();
-    await this.port.open({
-      baudRate: opts.baudRate ?? 115200,
+    this.openOpts = { baudRate: opts.baudRate ?? 115200 };
+    await this.openPort();
+    this.run = true;
+    console.info("[webserial] opened", { baudRate: this.openOpts.baudRate, signals: this.signalState });
+    void this.readSupervisor();
+  }
+
+  /** (Re)open the granted port: stream config, DTR/RTS, fresh writer. Used by the
+   *  initial open AND by recovery after a transient device loss (same SerialPort
+   *  object — its permission persists, so no chooser is needed). */
+  private async openPort(): Promise<void> {
+    await this.port!.open({
+      baudRate: this.openOpts.baudRate,
       dataBits: 8,
       stopBits: 1,
       parity: "none",
     });
-    // Assert DTR + RTS the way picocom/screen do by default. Chrome's Web Serial
-    // opens with these DEASSERTED, which on some USB-serial + level-shifter chains
-    // leaves the link dead (RX never arrives) even though the exact same port works
-    // in picocom. The U-Boot console has no DTR/RTS auto-reset circuit, so asserting
-    // both is safe. Best-effort: not every platform implements setSignals.
+    // Assert DTR + RTS the way picocom/screen do by default (Chrome opens them
+    // deasserted). Harmless on the U-Boot console (no auto-reset circuit).
     try {
-      await this.port.setSignals({ dataTerminalReady: true, requestToSend: true });
+      await this.port!.setSignals({ dataTerminalReady: true, requestToSend: true });
       this.signalState = "asserted";
     } catch (e) {
       this.signalState = "setSignals-failed(" + ((e as Error)?.message ?? e) + ")";
       console.warn("[webserial] setSignals failed:", e);
     }
-    this.writer = this.port.writable!.getWriter();
-    this.run = true;
-    console.info("[webserial] opened", { baudRate: opts.baudRate ?? 115200, signals: this.signalState });
-    void this.readLoop();
+    this.writer = this.port!.writable!.getWriter();
   }
 
   async setSignals(s: { dtr?: boolean; rts?: boolean; brk?: boolean }): Promise<void> {
@@ -71,35 +78,73 @@ export class WebSerialTransport implements SerialTransport {
     });
   }
 
-  private async readLoop(): Promise<void> {
-    try {
-      // getReader() throws if `readable` is null (port not readable / already
-      // locked) — capture that instead of silently reading nothing forever.
-      this.reader = this.port!.readable!.getReader();
-      this.loopState = "running";
-      while (this.run) {
-        const { value, done } = await this.reader.read();
-        if (done) break;
-        if (value && value.byteLength) {
-          this.rxBytes += value.byteLength;
-          this.rx += dec.decode(value, { stream: true });
+  /**
+   * Owns the read loop AND transparent recovery. A USB serial adapter routinely
+   * drops mid-flow — the unlock flow even *requires* a power-cycle right after
+   * opening serial, and WSL/usbip forwarding drops the device on its own. Web
+   * Serial surfaces that as reader.read() rejecting ("The device has been lost").
+   * Instead of dying permanently, we reopen the same granted port when it returns
+   * and resume, so catchPrompt (which spans the outage) simply continues.
+   */
+  private async readSupervisor(): Promise<void> {
+    while (this.run) {
+      try {
+        this.loopState = this.reconnects ? "recovered" : "running";
+        this.reader = this.port!.readable!.getReader();
+        try {
+          while (this.run) {
+            const { value, done } = await this.reader.read();
+            if (done) break; // stream closed under us -> fall through to recovery
+            if (value && value.byteLength) {
+              this.rxBytes += value.byteLength;
+              this.rx += dec.decode(value, { stream: true });
+            }
+          }
+        } finally {
+          try { this.reader?.releaseLock(); } catch { /* noop */ }
         }
+      } catch (e) {
+        this.loopErr = (e as Error)?.message ?? String(e);
+        console.error("[webserial] read loop error:", e);
       }
-      this.loopState = "ended";
-    } catch (e) {
-      this.loopErr = (e as Error)?.message ?? String(e);
-      console.error("[webserial] read loop error:", e);
-    } finally {
-      try { this.reader?.releaseLock(); } catch { /* noop */ }
+      if (!this.run) break;
+      if (!(await this.recover())) { this.loopState = "lost"; break; }
     }
+    if (this.run) this.loopState = "ended";
+  }
+
+  /** Reopen the port after a loss. Returns false if it doesn't come back in ~30 s
+   *  (comfortably longer than a power-cycle), so we don't spin forever. */
+  private async recover(): Promise<boolean> {
+    try { this.writer?.releaseLock(); } catch { /* noop */ }
+    this.writer = null;
+    try { await this.port?.close(); } catch { /* already gone */ }
+    for (let i = 0; i < 100 && this.run; i++) {
+      await sleep(300);
+      try {
+        await this.openPort();
+        this.reconnects++;
+        this.loopErr = null;
+        console.info("[webserial] serial recovered (reconnect #" + this.reconnects + ")");
+        return true;
+      } catch { /* device not back yet — keep waiting */ }
+    }
+    this.loopErr = "device lost and did not return within ~30s";
+    return false;
   }
 
   async send(line: string): Promise<void> {
-    await this.writer!.write(enc.encode(line + "\r"));
+    // Skip (don't throw) while the port is dropped/recovering — the caller (e.g.
+    // catchPrompt) retries, and comms resume once the port reopens.
+    if (!this.writer) return;
+    try { await this.writer.write(enc.encode(line + "\r")); }
+    catch { /* write raced a device drop; recovery will reopen */ }
   }
 
   async writeRaw(bytes: Uint8Array): Promise<void> {
-    await this.writer!.write(bytes);
+    if (!this.writer) return;
+    try { await this.writer.write(bytes); }
+    catch { /* write raced a device drop; recovery will reopen */ }
   }
 
   drain(): void {
@@ -123,7 +168,7 @@ export class WebSerialTransport implements SerialTransport {
   }
 
   async close(): Promise<void> {
-    this.run = false;
+    this.run = false; // stops the supervisor + any in-flight recovery loop
     try { await this.reader?.cancel(); } catch { /* noop */ }
     try { this.writer?.releaseLock(); } catch { /* noop */ }
     try { await this.port?.close(); } catch { /* noop */ }
