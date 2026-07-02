@@ -57,6 +57,13 @@ export interface Flow {
   summary?: string;
   /** Marks a not-yet-implemented flow as the "Soon" placeholder. */
   soon?: boolean;
+  /**
+   * This flow can only run in the native (Tauri) flavor — its transport has no
+   * browser equivalent (e.g. i.MX SDP / UUU BootROM recovery, which ships no
+   * WebUSB descriptors). The web flavor renders it disabled with a "Native app
+   * required" note and refuses to start it.
+   */
+  nativeOnly?: boolean;
   steps: Step[];
 }
 

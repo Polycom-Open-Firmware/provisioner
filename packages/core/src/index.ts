@@ -47,3 +47,4 @@ export {
   STOCK_PARTITIONS,
   ENV,
 } from "./profiles/tc8";
+export { c60Profile, c60UnlockFlow, C60_FILTERS } from "./profiles/c60";

@@ -13,6 +13,7 @@ import * as React from "react";
 import {
   WizardRunner,
   tc8Profile,
+  c60Profile,
   type Device,
   type Flow,
   type Step,
@@ -43,6 +44,8 @@ interface WizardState {
 
 export interface WizardApi extends WizardState {
   devices: Device[];
+  /** Which flavor is running — gates native-only flows (e.g. C60 UUU unlock). */
+  platform: "web" | "native";
   currentStep: Step | null;
   pickDevice: (d: Device) => void;
   pickFlow: (f: Flow) => void;
@@ -107,7 +110,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
   }
   const runner = runnerRef.current;
 
-  const devices = React.useMemo(() => [tc8Profile()], []);
+  const platform: "web" | "native" = isTauri() ? "native" : "web";
+  const devices = React.useMemo(() => [tc8Profile(), c60Profile()], []);
   const [state, setState] = React.useState<WizardState>(initial);
 
   // Keep a ref of the latest state so click handlers read fresh values without
@@ -124,6 +128,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
 
   const pickFlow = (f: Flow) => {
     if (f.soon) return;
+    if (f.nativeOnly && platform === "web") return; // greyed in the picker; refuse to start
     setState((s) => ({ ...s, flow: f, phase: "in-flow", stepIndex: 0, lines: [], progress: null, error: null }));
     runner.start(f);
   };
@@ -205,6 +210,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
   const value: WizardApi = {
     ...state,
     devices,
+    platform,
     currentStep,
     pickDevice,
     pickFlow,

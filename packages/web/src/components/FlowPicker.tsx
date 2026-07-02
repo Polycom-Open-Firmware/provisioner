@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { DEVICE_IMAGES } from "@/lib/devices";
 
 export function FlowPicker() {
-  const { device, pickFlow, back } = useWizard();
+  const { device, pickFlow, back, platform } = useWizard();
   if (!device) return null;
   const img = DEVICE_IMAGES[device.id];
 
@@ -30,23 +30,33 @@ export function FlowPicker() {
         <p className="mt-1 text-[15px] text-body">{device.name}</p>
 
         <div className="mt-6 border-t border-border">
-          {device.flows.map((f) => (
-            <button
-              key={f.id}
-              disabled={f.soon}
-              onClick={() => pickFlow(f)}
-              className="flex w-full items-center justify-between gap-4 border-b border-border px-1 py-[17px] text-left transition enabled:hover:bg-rail disabled:opacity-55"
-            >
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[15px] font-semibold text-foreground">{f.title}</span>
-                  {f.soon && <Badge>Soon</Badge>}
+          {device.flows.map((f) => {
+            const nativeBlocked = !!f.nativeOnly && platform === "web";
+            const disabled = f.soon || nativeBlocked;
+            return (
+              <button
+                key={f.id}
+                disabled={disabled}
+                onClick={() => pickFlow(f)}
+                className="flex w-full items-center justify-between gap-4 border-b border-border px-1 py-[17px] text-left transition enabled:hover:bg-rail disabled:opacity-55"
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[15px] font-semibold text-foreground">{f.title}</span>
+                    {f.soon && <Badge>Soon</Badge>}
+                    {nativeBlocked && <Badge>Native app required</Badge>}
+                  </div>
+                  {f.summary && <div className="mt-0.5 text-[13px] text-muted">{f.summary}</div>}
+                  {nativeBlocked && (
+                    <div className="mt-0.5 text-[13px] text-muted">
+                      Uses low-level USB recovery a browser can't perform — open this in the native app.
+                    </div>
+                  )}
                 </div>
-                {f.summary && <div className="mt-0.5 text-[13px] text-muted">{f.summary}</div>}
-              </div>
-              {!f.soon && <ChevronRight className="h-5 w-5 shrink-0 text-muted" />}
-            </button>
-          ))}
+                {!disabled && <ChevronRight className="h-5 w-5 shrink-0 text-muted" />}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

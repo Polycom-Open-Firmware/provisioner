@@ -10,9 +10,9 @@ import { DEVICE_IMAGES } from "@/lib/devices";
 import { CornerBadges } from "./CornerBadges";
 
 // "Coming soon" devices — not yet supported; shown dimmed with a Soon badge.
-const SOON = [
-  { name: "Polycom Trio C60", src: "/poly-c60.png" },
-];
+// (C60 is now a real, selectable device profile; its browser-incompatible Unlock
+// is gated per-flow with "Native app required" in the FlowPicker.)
+const SOON: { name: string; src: string }[] = [];
 
 function UnsupportedBanner({ sup }: { sup: ReturnType<typeof webSupport> }) {
   const missing = [
