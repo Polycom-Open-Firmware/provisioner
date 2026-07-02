@@ -64,6 +64,10 @@ export class UBootConsole {
     message = "catching U-Boot prompt -- power-cycle the unit now if it's off...",
   ): Promise<boolean> {
     log(message);
+    const esc = (s: string) => s.replace(/\r/g, "\\r").replace(/\n/g, "\\n");
+    const diag = () => (this.serial.debugInfo ? " [" + this.serial.debugInfo() + "]" : "");
+    let seen = ""; // everything the port emitted while we were spamming CRs
+    let announced = false; // logged the first-bytes-arrived signal yet?
     for (let i = 0; i < tries; i++) {
       await this.serial.send(""); // bare CR
       const out = await this.serial.readUntil(PROMPT, 250);
@@ -73,6 +77,26 @@ export class UBootConsole {
         log("got prompt.");
         return true;
       }
+      seen += out;
+      // Stream the single most useful signal the moment it's knowable: is RX alive
+      // at all? (dead RX => signals/wiring/baud; live RX w/o '=>' => prompt mismatch.)
+      if (!announced && seen.length > 0) {
+        announced = true;
+        log("receiving serial data (RX is alive): " + JSON.stringify(esc(seen.slice(-120))));
+      }
+      // Heartbeat every ~10 s so a long catch isn't a silent wall.
+      if (i > 0 && i % 40 === 0)
+        log("still catching prompt… try " + i + "/" + tries + ", " + seen.length + " byte(s) seen so far" +
+          (seen.length === 0 ? " (nothing on RX yet — power-cycle now)" : "") + diag());
+    }
+    // Final verdict, so a failed catch is actionable rather than just "retry".
+    if (seen.length === 0) {
+      log("NO serial data received on RX across " + tries + " tries — the link is one-way or dead." + diag() +
+        " Native works on this port, so if this is the web flavor: make sure nothing else holds the COM " +
+        "(native app / picocom / forwarder), and the port isn't being consumed by a bridge.");
+    } else {
+      log("received " + seen.length + " byte(s) but never matched the '" + PROMPT +
+        "' prompt — likely a different prompt string. Last bytes: " + JSON.stringify(esc(seen.slice(-200))));
     }
     return false;
   }

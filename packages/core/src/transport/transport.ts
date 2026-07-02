@@ -83,6 +83,10 @@ export interface SerialTransport {
   readUntil(needle: string, timeoutMs?: number): Promise<string>;
   /** Native-only signal control (optional; web omits it). */
   setSignals?(s: { dtr?: boolean; rts?: boolean; brk?: boolean }): Promise<void>;
+  /** Optional adapter self-report (bytes seen on RX, read-loop errors, signal
+   *  state) that the console layer can surface into the Status Log when a step
+   *  fails — turns "no comms" into an actionable line. */
+  debugInfo?(): string;
   close(): Promise<void>;
 }
 
