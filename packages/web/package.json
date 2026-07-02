@@ -1,6 +1,6 @@
 {
   "name": "@provisioner/web",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "type": "module",
   "description": "Web flavor: React + shadcn wizard over the WebUSB / Web Serial adapter and @provisioner/core.",
