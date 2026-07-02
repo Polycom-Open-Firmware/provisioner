@@ -16,16 +16,32 @@ const BACKUP_ADDR = 0x90000000; // RAM: hold boot_b's original sectors
 const RELOC_ADDR = 0x40200000; // RAM: scratch for the boot_b->boot1 copy
 const STAGE2_SIG = "0a 00 00 14"; // first 4 bytes of a valid stage-2 image
 
-// chainload from boot1 (HW part 2), run under stock stage-1. The literal `\;` is
-// what U-Boot needs so the whole script survives setenv as a single value.
-const BOOTCMD =
-  "mmc dev 1 2\\; mmc read 0x40200000 0 0x1400\\; mmc dev 1 0\\; " +
-  "dcache flush\\; icache off\\; dcache off\\; go 0x40200000";
-
 const hex = (n: number) => "0x" + n.toString(16);
+
+// The eMMC's mmc device index is NOT fixed across board revs: the original TC8
+// brings the eMMC up as `mmc 1`, but a newer rev enumerates it as `mmc 2` (with
+// the empty SD slot at `mmc 1`). Assuming `mmc dev 1` there hits the SD slot
+// ("Card did not respond to voltage select") and the enrollment fails. So we
+// DETECT the eMMC at runtime (detectEmmc) and thread the index through every mmc
+// op AND the persisted chainload. Stage-2 always lives in the eMMC's boot1 HW
+// partition (hwpart 2); the stock OS GPT is in the user area (hwpart 0).
+const EMMC_HWPART_USER = 0;
+const EMMC_HWPART_BOOT1 = 2;
+const GPT_PROBE_ADDR = 0x42000000; // RAM scratch for the read-only GPT-signature probe
+
+// chainload from boot1, run under stock stage-1. The literal `\;` is what U-Boot
+// needs so the whole script survives setenv as a single value. Built from the
+// detected eMMC index so the persisted bootcmd matches the running hardware.
+function buildBootcmd(dev: number): string {
+  return (
+    `mmc dev ${dev} ${EMMC_HWPART_BOOT1}\\; mmc read ${hex(RELOC_ADDR)} 0 ${hex(STAGE2_LEN)}\\; ` +
+    `mmc dev ${dev} ${EMMC_HWPART_USER}\\; dcache flush\\; icache off\\; dcache off\\; go ${hex(RELOC_ADDR)}`
+  );
+}
 
 interface UnlockState {
   originalBootcmd: string;
+  emmcDev: number;
 }
 
 async function fetchStage2(ctx: FlowContext): Promise<Uint8Array> {
@@ -41,9 +57,62 @@ async function fetchStage2(ctx: FlowContext): Promise<Uint8Array> {
   return bytes;
 }
 
+/**
+ * Select an mmc device + HW partition and report whether the switch actually
+ * took. Key detail learned on the bench: on a missing SD slot U-Boot prints
+ * "Card did not respond…" and leaves the PREVIOUS device current — so a bare
+ * `mmc read` afterwards silently hits the wrong device. We therefore gate on the
+ * explicit "is current device" success line rather than trusting the read.
+ */
+async function selectMmc(ctx: FlowContext, dev: number, hwpart: number): Promise<boolean> {
+  const out = await ctx.uboot.cmd(`mmc dev ${dev} ${hwpart}`, { expectOk: false });
+  return /is current device/i.test(out) &&
+    !/not found|did not respond|no mmc device|error/i.test(out);
+}
+
+/**
+ * Find the eMMC's mmc device index for THIS unit (varies by board rev). Fully
+ * read-only: parses `mmc list` (preferring the "(eMMC)" tag), then CONFIRMS each
+ * candidate with a successful select + the boot-partition markers in `mmc info`
+ * + the stock GPT signature ("EFI PART" at LBA 1). Never writes. Throws with the
+ * raw `mmc list` if nothing qualifies, so we abort before touching flash.
+ */
+async function detectEmmc(ctx: FlowContext): Promise<number> {
+  const list = await ctx.uboot.cmd("mmc list", { expectOk: false });
+  ctx.log("mmc list:\n" + list.trim());
+
+  const tag = list.match(/(\d+)\s*\(eMMC\)/i);
+  const tagged = tag ? Number(tag[1]) : null;
+  const listed = [...list.matchAll(/:\s*(\d+)\b/g)].map((m) => Number(m[1]));
+  // eMMC-tagged index first, then everything the list named, then a fallback scan.
+  const order = [...new Set([...(tagged !== null ? [tagged] : []), ...listed, 2, 1, 0])];
+
+  for (const dev of order) {
+    if (!(await selectMmc(ctx, dev, EMMC_HWPART_USER))) continue; // couldn't switch → skip
+    const info = await ctx.uboot.cmd("mmc info", { expectOk: false });
+    if (!/boot\s*area|boot\s*capacity|rpmb/i.test(info)) continue; // no boot HW parts → not eMMC
+    // The select succeeded, so this read really targets `dev`: confirm the GPT.
+    await ctx.uboot.cmd(`mmc read ${hex(GPT_PROBE_ADDR)} 1 1`, { expectOk: false });
+    const dump = await ctx.uboot.cmd(`md.b ${hex(GPT_PROBE_ADDR)} 8`, { expectOk: false });
+    const gpt = dump.includes("EFI PART") || /45 46 49 20 50 41 52 54/.test(dump);
+    ctx.log(
+      `eMMC candidate mmc dev ${dev}${tagged === dev ? " (list-tagged eMMC)" : ""}: ` +
+        `boot partitions present, stock GPT ${gpt ? "found" : "NOT found"}.`,
+    );
+    if (gpt) {
+      await ctx.uboot.cmd(`mmc dev ${dev} ${EMMC_HWPART_USER}`, { expectOk: false }); // leave user area selected
+      return dev;
+    }
+  }
+  throw new Error(
+    "could not locate the eMMC (no slot had boot partitions + a stock GPT). mmc list was:\n" +
+      list.trim() + "\nAborting before any write — send this so we can add the board rev's layout.",
+  );
+}
+
 /** Build the Unlock flow. The factory closes over per-run scratch state. */
 export function unlockFlow(): Flow {
-  const state: UnlockState = { originalBootcmd: "" };
+  const state: UnlockState = { originalBootcmd: "", emmcDev: 0 };
 
   return {
     id: "unlock",
@@ -115,9 +184,14 @@ export function unlockFlow(): Flow {
           state.originalBootcmd = orig.trim();
           ctx.log("ORIGINAL bootcmd (saved for recovery):\n" + state.originalBootcmd);
 
+          // Which mmc device is the eMMC varies by board rev — detect it now and
+          // reuse the index for the backup, the relocate, and the persisted bootcmd.
+          state.emmcDev = await detectEmmc(ctx);
+          ctx.log("eMMC is mmc dev " + state.emmcDev + " on this unit.");
+
           // back up boot_b's first sectors to RAM so we can leave boot_b pristine
           ctx.log("backing up boot_b first " + hex(STAGE2_LEN) + " sectors to RAM " + hex(BACKUP_ADDR));
-          await ctx.uboot.cmd("mmc dev 1 0");
+          await ctx.uboot.cmd(`mmc dev ${state.emmcDev} ${EMMC_HWPART_USER}`);
           await ctx.uboot.cmd("mmc read " + hex(BACKUP_ADDR) + " " + hex(BOOTB_LBA) + " " + hex(STAGE2_LEN));
 
           // enter stock fastboot and let the gadget enumerate
@@ -170,24 +244,27 @@ export function unlockFlow(): Flow {
           await ctx.uboot.waitFor("=>", 8000);
           try { await ctx.fb.disconnect(); } catch { /* gadget already gone */ }
 
+          const dev = state.emmcDev;
+
           // copy stage-2 from boot_b -> boot1 (the 2nd boot HW partition)
           ctx.log("copying stage-2 boot_b -> boot1");
-          await ctx.uboot.cmd("mmc dev 1 0");
+          await ctx.uboot.cmd(`mmc dev ${dev} ${EMMC_HWPART_USER}`);
           await ctx.uboot.cmd("mmc read " + hex(RELOC_ADDR) + " " + hex(BOOTB_LBA) + " " + hex(STAGE2_LEN));
           const sig = await ctx.uboot.cmd("md.b " + hex(RELOC_ADDR) + " 4", { expectOk: false });
           if (!sig.includes(STAGE2_SIG))
             throw new Error("stage-2 signature not found after flash:\n" + sig);
-          await ctx.uboot.cmd("mmc dev 1 2");
+          await ctx.uboot.cmd(`mmc dev ${dev} ${EMMC_HWPART_BOOT1}`);
           await ctx.uboot.cmd("mmc write " + hex(RELOC_ADDR) + " 0 " + hex(STAGE2_LEN));
-          await ctx.uboot.cmd("mmc dev 1 0");
+          await ctx.uboot.cmd(`mmc dev ${dev} ${EMMC_HWPART_USER}`);
 
           // restore boot_b from the RAM backup (leave it pristine)
           ctx.log("restoring boot_b from backup");
           await ctx.uboot.cmd("mmc write " + hex(BACKUP_ADDR) + " " + hex(BOOTB_LBA) + " " + hex(STAGE2_LEN));
 
-          // set up chainloading + persist, then reboot into stage-2
-          ctx.log("installing chainload bootcmd + saveenv");
-          await ctx.uboot.cmd("setenv bootcmd '" + BOOTCMD + "'");
+          // set up chainloading + persist, then reboot into stage-2. The bootcmd is
+          // built from the detected eMMC index so it matches this unit's hardware.
+          ctx.log("installing chainload bootcmd + saveenv (eMMC = mmc dev " + dev + ")");
+          await ctx.uboot.cmd("setenv bootcmd '" + buildBootcmd(dev) + "'");
           await ctx.uboot.cmd("saveenv");
           ctx.log("bootloader installed + chainload persisted.");
         },
