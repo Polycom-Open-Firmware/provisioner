@@ -51,7 +51,9 @@ async function runFlash(ctx: FlowContext): Promise<void> {
     0,
   );
   const grandTotal = small.reduce((a, s) => a + s.data.byteLength, 0) + sparseTotal;
-  const info = (m: string) => ctx.log("  INFO " + m);
+  // fastboot INFO lines are verbose — send them to the dev console, not the
+  // operator-facing Status Log.
+  const info = (m: string) => { try { console.info("[fastboot] " + m); } catch { /* no console */ } };
   let base = 0;
 
   for (const s of small) {

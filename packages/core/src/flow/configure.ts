@@ -53,7 +53,7 @@ async function runApply(ctx: FlowContext): Promise<void> {
     CONFIG_PARTITION,
     blob,
     (d, t) => ctx.progress(d, t),
-    (m) => ctx.log("  INFO " + m),
+    (m) => { try { console.info("[fastboot] " + m); } catch { /* no console */ } },
   );
   ctx.progress(blob.byteLength, blob.byteLength);
   ctx.log("  " + CONFIG_PARTITION + " OK");

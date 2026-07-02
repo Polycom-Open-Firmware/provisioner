@@ -106,7 +106,7 @@ export function StepContent() {
           </div>
           <Progress value={pct} />
           <p className="mt-3 truncate font-mono text-xs text-muted">
-            {lines[lines.length - 1]?.msg ?? "Working…"}
+            {(lines[lines.length - 1]?.msg ?? "Working…").split("\n")[0]}
           </p>
         </div>
       )}

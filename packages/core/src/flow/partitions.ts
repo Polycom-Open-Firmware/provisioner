@@ -62,7 +62,8 @@ export async function ensurePartitionTable(
   // region covering the whole user area; the sparse image places the primary GPT at
   // LBA 0 and the backup at the end, leaving everything between untouched.
   await ctx.fb.defineRawPartition("gpt", 0, DISK_SECTORS);
-  await ctx.fb.flash("gpt", simg, (d, t) => ctx.progress(d, t), (m) => ctx.log("  INFO " + m));
+  await ctx.fb.flash("gpt", simg, (d, t) => ctx.progress(d, t),
+    (m) => { try { console.info("[fastboot] " + m); } catch { /* no console */ } });
 
   // Force a re-probe so the running session sees the new table (a fresh probe of a
   // nuked disk caches "no partitions"). Best-effort; harmless if the driver already
