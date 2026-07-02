@@ -65,6 +65,10 @@ export class UBootConsole {
   ): Promise<boolean> {
     log(message);
     const esc = (s: string) => s.replace(/\r/g, "\\r").replace(/\n/g, "\\n");
+    // Verbose serial diagnostics go to the browser/dev console, NOT the operator-
+    // facing Status Log (which stays quiet: the hint, then success or a concise
+    // error from the caller). Prefixed so it's easy to filter in DevTools.
+    const dbg = (m: string) => { try { console.info("[uboot] " + m); } catch { /* no console */ } };
     const diag = () => (this.serial.debugInfo ? " [" + this.serial.debugInfo() + "]" : "");
     let seen = ""; // everything the port emitted while we were spamming CRs
     let announced = false; // logged the first-bytes-arrived signal yet?
@@ -78,26 +82,22 @@ export class UBootConsole {
         return true;
       }
       seen += out;
-      // Stream the single most useful signal the moment it's knowable: is RX alive
-      // at all? (dead RX => signals/wiring/baud; live RX w/o '=>' => prompt mismatch.)
+      // Is RX alive at all? (dead RX => signals/wiring/baud; live RX w/o '=>' =>
+      // prompt mismatch.) Console-only — the operator doesn't need the play-by-play.
       if (!announced && seen.length > 0) {
         announced = true;
-        log("receiving serial data (RX is alive): " + JSON.stringify(esc(seen.slice(-120))));
+        dbg("receiving serial data (RX is alive): " + JSON.stringify(esc(seen.slice(-120))));
       }
-      // Heartbeat every ~10 s so a long catch isn't a silent wall.
       if (i > 0 && i % 40 === 0)
-        log("still catching prompt… try " + i + "/" + tries + ", " + seen.length + " byte(s) seen so far" +
-          (seen.length === 0 ? " (nothing on RX yet — power-cycle now)" : "") + diag());
+        dbg("still catching prompt… try " + i + "/" + tries + ", " + seen.length + " byte(s) seen" +
+          (seen.length === 0 ? " (nothing on RX yet)" : "") + diag());
     }
-    // Final verdict, so a failed catch is actionable rather than just "retry".
-    if (seen.length === 0) {
-      log("NO serial data received on RX across " + tries + " tries — the link is one-way or dead." + diag() +
-        " Native works on this port, so if this is the web flavor: make sure nothing else holds the COM " +
-        "(native app / picocom / forwarder), and the port isn't being consumed by a bridge.");
-    } else {
-      log("received " + seen.length + " byte(s) but never matched the '" + PROMPT +
-        "' prompt — likely a different prompt string. Last bytes: " + JSON.stringify(esc(seen.slice(-200))));
-    }
+    // Detailed verdict → console; the caller surfaces a concise error to the UI.
+    if (seen.length === 0)
+      dbg("NO serial data across " + tries + " tries — RX is dead/one-way." + diag());
+    else
+      dbg("received " + seen.length + " byte(s) but never matched '" + PROMPT +
+        "' — likely a different prompt string. Last bytes: " + JSON.stringify(esc(seen.slice(-200))));
     return false;
   }
 }

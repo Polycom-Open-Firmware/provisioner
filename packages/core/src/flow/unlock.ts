@@ -79,7 +79,7 @@ async function selectMmc(ctx: FlowContext, dev: number, hwpart: number): Promise
  */
 async function detectEmmc(ctx: FlowContext): Promise<number> {
   const list = await ctx.uboot.cmd("mmc list", { expectOk: false });
-  ctx.log("mmc list:\n" + list.trim());
+  try { console.info("[unlock] mmc list:\n" + list.trim()); } catch { /* no console */ }
 
   const tag = list.match(/(\d+)\s*\(eMMC\)/i);
   const tagged = tag ? Number(tag[1]) : null;
@@ -95,10 +95,12 @@ async function detectEmmc(ctx: FlowContext): Promise<number> {
     await ctx.uboot.cmd(`mmc read ${hex(GPT_PROBE_ADDR)} 1 1`, { expectOk: false });
     const dump = await ctx.uboot.cmd(`md.b ${hex(GPT_PROBE_ADDR)} 8`, { expectOk: false });
     const gpt = dump.includes("EFI PART") || /45 46 49 20 50 41 52 54/.test(dump);
-    ctx.log(
-      `eMMC candidate mmc dev ${dev}${tagged === dev ? " (list-tagged eMMC)" : ""}: ` +
-        `boot partitions present, stock GPT ${gpt ? "found" : "NOT found"}.`,
-    );
+    try {
+      console.info(
+        `[unlock] eMMC candidate mmc dev ${dev}${tagged === dev ? " (list-tagged eMMC)" : ""}: ` +
+          `boot partitions present, stock GPT ${gpt ? "found" : "NOT found"}.`,
+      );
+    } catch { /* no console */ }
     if (gpt) {
       await ctx.uboot.cmd(`mmc dev ${dev} ${EMMC_HWPART_USER}`, { expectOk: false }); // leave user area selected
       return dev;
