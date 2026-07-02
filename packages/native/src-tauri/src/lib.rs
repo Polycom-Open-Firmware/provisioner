@@ -19,7 +19,7 @@ use nusb::descriptors::TransferType;
 use nusb::transfer::{Buffer, Bulk, Direction, In, Out};
 use nusb::{Endpoint, MaybeFuture};
 use serde::{Deserialize, Serialize};
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 
 // ---- shared types (camelCase across the IPC boundary, matching core) ----------
 
@@ -358,6 +358,113 @@ fn serial_close(state: State<SerialState>) -> Result<(), String> {
     Ok(())
 }
 
+// ---- C60 SDP / UUU boot -------------------------------------------------------
+//
+// No browser equivalent — the i.MX BootROM (SDP) speaks a vendor HID protocol with
+// no WinUSB/WebUSB descriptors. We shell to the proven `uuu` tool for the SDP load
+// (reimplementing SDP in Rust would be far riskier), then drive the U-Boot autoboot
+// interrupt + slot boot sequence over UART. Mirrors polycom-uboot's
+// scripts/c60-dualboot handoff. Progress streams to the webview as `c60-progress`.
+
+#[derive(Clone, Serialize)]
+struct C60Progress {
+    line: String,
+}
+
+fn c60_emit(app: &AppHandle, line: impl Into<String>) {
+    let _ = app.emit("c60-progress", C60Progress { line: line.into() });
+}
+
+const SDP_VID: u16 = 0x1fc9;
+const SDP_PID: u16 = 0x0134;
+
+#[tauri::command]
+fn c60_provision(
+    app: AppHandle,
+    flash_bin: Vec<u8>,
+    hammer_secs: u64,
+    cmds: Vec<String>,
+    uart_path: Option<String>,
+) -> Result<(), String> {
+    // 1. Stage flash.bin for uuu.
+    let mut tmp = std::env::temp_dir();
+    tmp.push("c60-flash.bin");
+    std::fs::write(&tmp, &flash_bin).map_err(|e| format!("staging flash.bin: {e}"))?;
+    c60_emit(&app, format!("staged U-Boot ({} bytes)", flash_bin.len()));
+
+    // 2. Wait for the SDP device (both BOOT_MODE switches OFF -> 1fc9:0134).
+    c60_emit(&app, "waiting for the device in recovery (SDP) mode (1fc9:0134)…");
+    let deadline = std::time::Instant::now() + Duration::from_secs(120);
+    loop {
+        let found = nusb::list_devices()
+            .wait()
+            .map_err(|e| e.to_string())?
+            .any(|d| d.vendor_id() == SDP_VID && d.product_id() == SDP_PID);
+        if found {
+            break;
+        }
+        if std::time::Instant::now() > deadline {
+            return Err("timed out waiting for the device in SDP mode (1fc9:0134) — set both BOOT_MODE switches OFF and reconnect USB".into());
+        }
+        std::thread::sleep(Duration::from_millis(500));
+    }
+    c60_emit(&app, "device detected — loading the open bootloader via uuu…");
+
+    // 3. Load our U-Boot over SDP. uuu keeps serving after the load (like the
+    //    handoff's backgrounded `uuu … &`), so spawn it and move on after a beat
+    //    rather than waiting for it to exit.
+    let mut uuu = std::process::Command::new("uuu")
+        .arg("-b")
+        .arg("spl")
+        .arg(&tmp)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map_err(|e| format!("could not start `uuu` (is it installed / bundled?): {e}"))?;
+    std::thread::sleep(Duration::from_secs(3));
+    c60_emit(&app, "bootloader loaded into RAM; opening the serial console…");
+
+    // 4. Drive the U-Boot console over UART: hammer CR to catch the autoboot
+    //    interrupt window, then send the slot boot sequence.
+    let path = match uart_path {
+        Some(p) if !p.is_empty() => p,
+        _ => serialport::available_ports()
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .find(|p| matches!(p.port_type, serialport::SerialPortType::UsbPort(_)))
+            .map(|p| p.port_name)
+            .ok_or("no serial (UART) port found for the console")?,
+    };
+    let drive = (|| -> Result<(), String> {
+        let mut port = serialport::new(&path, 115200)
+            .timeout(Duration::from_millis(100))
+            .open()
+            .map_err(|e| format!("open UART {path}: {e}"))?;
+        c60_emit(&app, format!("interrupting autoboot over {path} (~{hammer_secs}s)…"));
+        let start = std::time::Instant::now();
+        while start.elapsed() < Duration::from_secs(hammer_secs) {
+            let _ = port.write_all(b"\r");
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        std::thread::sleep(Duration::from_millis(500));
+        for c in &cmds {
+            c60_emit(&app, format!("> {c}"));
+            port.write_all(c.as_bytes()).map_err(|e| e.to_string())?;
+            port.write_all(b"\r").map_err(|e| e.to_string())?;
+            // `mmc read` moves multi-MB and needs longer to complete.
+            let wait = if c.starts_with("mmc read") { 2000 } else { 400 };
+            std::thread::sleep(Duration::from_millis(wait));
+        }
+        Ok(())
+    })();
+
+    // uuu has done its job (U-Boot is in RAM); stop it regardless of the UART result.
+    let _ = uuu.kill();
+    drive?;
+    c60_emit(&app, "boot sequence sent.");
+    Ok(())
+}
+
 // ---- entry point --------------------------------------------------------------
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -379,6 +486,7 @@ pub fn run() {
             serial_write,
             serial_signals,
             serial_close,
+            c60_provision,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

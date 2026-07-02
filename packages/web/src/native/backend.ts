@@ -4,6 +4,7 @@
 // bundle ships in both flavors; at startup it picks this backend when running
 // inside the Tauri webview, otherwise the web (WebUSB) backend.
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import type { Backend, SerialTransport, UsbFilter, UsbTransport } from "@provisioner/core";
 import { NativeUsbTransport } from "./usb";
 import { NativeSerialTransport } from "./serial";
@@ -51,6 +52,31 @@ export class NativeBackend implements Backend {
 
   serial(): SerialTransport {
     return new NativeSerialTransport();
+  }
+
+  /**
+   * C60 SDP→UUU boot. `c60_provision` (Rust) shells to `uuu` for the SDP load and
+   * drives the UART; it streams progress as `c60-progress` events, which we
+   * forward to `onLog`, and resolves when the command returns.
+   */
+  async c60Provision(opts: {
+    flashBin: Uint8Array;
+    hammerSecs: number;
+    cmds: string[];
+    uartPath?: string;
+    onLog: (line: string) => void;
+  }): Promise<void> {
+    const unlisten = await listen<{ line: string }>("c60-progress", (e) => opts.onLog(e.payload.line));
+    try {
+      await invoke("c60_provision", {
+        flashBin: Array.from(opts.flashBin),
+        hammerSecs: opts.hammerSecs,
+        cmds: opts.cmds,
+        uartPath: opts.uartPath ?? null,
+      });
+    } finally {
+      unlisten();
+    }
   }
 }
 

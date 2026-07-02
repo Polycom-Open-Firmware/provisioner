@@ -101,6 +101,20 @@ export interface Backend {
   serial(): SerialTransport;
   /** Native-only: bind WinUSB to a device so it can be opened at all (libwdi). */
   bindWinUsb?(info: DeviceInfo): Promise<void>;
+  /**
+   * Native-only: run the C60 SDP→UUU boot procedure. Loads our U-Boot over the
+   * i.MX BootROM (`uuu -b spl <flashBin>`), then drives the slot boot sequence
+   * (`cmds`) over UART after hammering CR for `hammerSecs` to catch the autoboot
+   * interrupt window. No browser equivalent — UUU/SDP ships no WebUSB descriptors.
+   * `onLog` streams progress lines to the caller (the UI Status Log).
+   */
+  c60Provision?(opts: {
+    flashBin: Uint8Array;
+    hammerSecs: number;
+    cmds: string[];
+    uartPath?: string;
+    onLog: (line: string) => void;
+  }): Promise<void>;
 }
 
 export const sleep = (ms: number): Promise<void> =>
