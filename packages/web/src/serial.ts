@@ -40,9 +40,31 @@ export class WebSerialTransport implements SerialTransport {
 
   async open(opts: { baudRate?: number; path?: string } = {}): Promise<void> {
     // `path` is native-only; the browser always prompts with its own chooser.
-    this.port = await navigator.serial.requestPort();
+    // Release any port we still hold from a prior attempt so a retry doesn't fail
+    // with "The port is already open".
+    if (this.port) { try { await this.close(); } catch { /* noop */ } }
+
+    const port = await navigator.serial.requestPort();
+    this.port = port;
     this.openOpts = { baudRate: opts.baudRate ?? 115200 };
-    await this.openPort();
+    try {
+      await this.openPort();
+    } catch (e) {
+      // Normalize the browser's vague open failure into an operator-actionable
+      // message. A busy port — something else still holding it — is by far the
+      // most common cause, so name it and say what to do.
+      this.port = null;
+      const name = (e as { name?: string })?.name ?? "";
+      const msg = (e as Error)?.message ?? String(e);
+      const busy = name === "InvalidStateError" ||
+        /already open|in use|access is denied|failed to open|networkerror|unknown/i.test(msg);
+      throw new Error(
+        busy
+          ? "Serial port is in use. Close anything else using it — the native app, " +
+            "PuTTY/picocom, or a COM-port forwarder — then choose the port again."
+          : "Could not open the serial port: " + msg,
+      );
+    }
     this.run = true;
     console.info("[webserial] opened", { baudRate: this.openOpts.baudRate, signals: this.signalState });
     void this.readSupervisor();
