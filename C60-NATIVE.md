@@ -29,19 +29,44 @@ is native:
 This mirrors the proven handoff in `polycom-uboot/scripts/c60-dualboot/`
 (`c60-boot` + `c60_boot_seq.py`) and `targets/c60-kepler_proto1/BOOT_RECIPES.md`.
 
-## Design choice: shell to `uuu` (don't reimplement SDP)
+## Two U-Boot-load paths (`native_sdp` flag on `c60_provision`)
 
-`uuu -b spl` runs a multi-stage SDP/mfgtool protocol (load SPL via SDP, jump, then
-load ATF+U-Boot). Reimplementing that in Rust would be a large, error-prone effort;
-`uuu` is proven. The native backend shells to it. The UART driving (the part that's
-simple and specific to our recipe) is native Rust via `serialport`.
+`uuu -b spl flash.bin` on i.MX8MM runs a two-stage load: BootROM **SDP**
+(`1fc9:0134`) loads the SPL and jumps; the SPL brings up DDR and re-enumerates as
+**SDPV**, which loads the U-Boot FIT into DRAM and jumps.
+
+- **default (`native_sdp` off): shell to `uuu`.** Proven; needs `uuu` on PATH or
+  bundled per-OS (the bundling pain). Kept as the fallback.
+- **`native_sdp` on: pure-Rust SDP loader (`sdp.rs`) — no external binary.** This
+  is the target: one Rust source compiles to all three OSes over `nusb`, no
+  bundling, no macOS notarization of a bundled exe. It reimplements the SDP wire
+  protocol (constants/structs transcribed verbatim from mfgtools `libuuu/sdp.{h,cpp}`):
+  the 16-byte big-endian `SDPCmd`, `WRITE_FILE`/`JUMP`, HID reports 1–4, IVT/BootData
+  parsing, and the `-skipspl` offset. **The protocol codec + IVT parsing are
+  unit-tested (`cargo test --lib sdp::`, 4 tests green).**
+
+The UART driving (recipe-specific, simple) is native Rust via `serialport` in both paths.
+
+### `native_sdp` — what still needs a real C60 to confirm (HW-VERIFY)
+
+The USB I/O can't be validated without hardware. Before flipping `native_sdp` on
+by default:
+- **SDPV re-enumeration PID** (`SDP_PID_SPL_SDPV`, currently `0x0152`) — confirm the
+  SPL's download-gadget PID on a real C60.
+- **HID report framing** — interrupt-OUT vs `SET_REPORT` control fallback; report
+  sizes; the HAB (report 3) / status (report 4) handshake ordering around
+  `WRITE_FILE`.
+- **Stage-2 addressing** — that the U-Boot FIT's own IVT (after the SPL) carries the
+  right `self_addr` (~`0x40200000` per BOOT_RECIPES memory map).
+
+Until then, `uuu` (default) is how you test the flow on the bench.
 
 ## Prerequisites to actually run it
 
-1. **`uuu` on PATH / bundled.** Present on the dev host (`~/.local/bin/uuu`). For
-   releases it must be bundled — add per-platform `uuu` to `tauri.conf.json`
-   `bundle.externalBin` and resolve its path in `c60_provision` (currently calls
-   bare `uuu`). Windows/macOS builds need their own `uuu` binaries. **TODO.**
+1. **U-Boot loader.** Either `uuu` on PATH/bundled (default path — present on the
+   dev host at `~/.local/bin/uuu`; a shipped app would need per-OS `uuu` via
+   `tauri.conf.json` `bundle.externalBin`), **or** — the goal — validate the
+   pure-Rust `native_sdp` path so no binary is bundled at all (see below).
 2. **`c60-manifest.json` artifact** served alongside the others, shape:
    ```json
    {

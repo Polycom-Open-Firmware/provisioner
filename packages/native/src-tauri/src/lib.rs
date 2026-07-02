@@ -10,6 +10,8 @@
 //! USB uses single transfers per call (one packet in / one packet out) to preserve
 //! fastboot's packet framing, matching WebUSB's transferIn/transferOut semantics.
 
+mod sdp;
+
 use std::io::{Read, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -385,6 +387,7 @@ fn c60_provision(
     hammer_secs: u64,
     cmds: Vec<String>,
     uart_path: Option<String>,
+    native_sdp: Option<bool>,
 ) -> Result<(), String> {
     // 1. Stage flash.bin for uuu.
     let mut tmp = std::env::temp_dir();
@@ -408,20 +411,29 @@ fn c60_provision(
         }
         std::thread::sleep(Duration::from_millis(500));
     }
-    c60_emit(&app, "device detected — loading the open bootloader via uuu…");
+    c60_emit(&app, "device detected — loading the open bootloader…");
 
-    // 3. Load our U-Boot over SDP. uuu keeps serving after the load (like the
-    //    handoff's backgrounded `uuu … &`), so spawn it and move on after a beat
-    //    rather than waiting for it to exit.
-    let mut uuu = std::process::Command::new("uuu")
-        .arg("-b")
-        .arg("spl")
-        .arg(&tmp)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()
-        .map_err(|e| format!("could not start `uuu` (is it installed / bundled?): {e}"))?;
-    std::thread::sleep(Duration::from_secs(3));
+    // 3. Load our U-Boot into DRAM. Two paths:
+    //    - native_sdp: pure-Rust SDP loader (no external binary) — see sdp.rs.
+    //    - default: shell to `uuu` (proven; keeps serving after the load, like the
+    //      handoff's backgrounded `uuu … &`, so spawn + move on rather than wait).
+    let mut uuu: Option<std::process::Child> = None;
+    if native_sdp.unwrap_or(false) {
+        c60_emit(&app, "loading U-Boot via the native SDP loader (no uuu)…");
+        sdp::load_uboot(&flash_bin, &mut |m: &str| c60_emit(&app, m.to_string()))?;
+    } else {
+        uuu = Some(
+            std::process::Command::new("uuu")
+                .arg("-b")
+                .arg("spl")
+                .arg(&tmp)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .spawn()
+                .map_err(|e| format!("could not start `uuu` (is it installed / bundled?): {e}"))?,
+        );
+        std::thread::sleep(Duration::from_secs(3));
+    }
     c60_emit(&app, "bootloader loaded into RAM; opening the serial console…");
 
     // 4. Drive the U-Boot console over UART: hammer CR to catch the autoboot
@@ -458,8 +470,11 @@ fn c60_provision(
         Ok(())
     })();
 
-    // uuu has done its job (U-Boot is in RAM); stop it regardless of the UART result.
-    let _ = uuu.kill();
+    // uuu (if used) has done its job (U-Boot is in RAM); stop it regardless of the
+    // UART result. The native path spawns no child.
+    if let Some(mut child) = uuu {
+        let _ = child.kill();
+    }
     drive?;
     c60_emit(&app, "boot sequence sent.");
     Ok(())
