@@ -1,78 +1,52 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-// c60.ts — the Polycom Trio C60 (codename kepler_proto1) device profile. Like
-// tc8.ts, a thin device-specific module that names the flows; the engine is generic.
+// c60.ts — the Polycom Trio C60 (codename kepler_proto1, i.MX8MM) device profile.
 //
-// The C60 differs from the TC8 in how it is first unlocked. The TC8 unlocks over a
-// serial + stock-fastboot bootstrap a browser can drive. The C60's BootROM recovery
-// is an i.MX SDP / UUU flow: with both BOOT_MODE switches OFF the SoC enumerates as
-// `1fc9:0134`, and `uuu -b spl flash.bin` loads our U-Boot (SPL→ATF→U-Boot) into
-// DRAM; we then interrupt its autoboot over UART and run the slot's boot sequence
-// (see polycom-uboot scripts/c60-dualboot + targets/c60-kepler_proto1/BOOT_RECIPES.md).
-// UUU/SDP ships NO WinUSB/WebUSB descriptors, so this flow is `nativeOnly` — the
-// native backend runs `uuu` + drives the UART (Backend.c60Provision).
+// The C60's first-time unlock is an i.MX Serial Download Protocol (SDP) load: with
+// both BOOT_MODE switches OFF the SoC enumerates as a HID device (1fc9:0134), and
+// we load our U-Boot into RAM in two stages (SPL → the SPL's SDPV gadget loads the
+// U-Boot FIT). This was the "needs a native app" case — until we proved the BootROM
+// HID interface (usage page 0xFF00) is reachable over **WebHID**. So the whole C60
+// unlock now runs in the browser (WebHID SDP → U-Boot → WebUSB fastboot → install),
+// no uuu / no driver / no native app. (`packages/native/src-tauri/src/sdp.rs` remains
+// a pure-Rust fallback for the Tauri webview, which has no WebHID.)
 //
-// Post-boot the C60 runs the same open U-Boot + Android fastboot gadget as the TC8,
+// After boot the C60 runs the same open U-Boot + Android fastboot gadget as the TC8,
 // so Install/Update and Configure are the IDENTICAL flows — reused verbatim.
 import type { UsbFilter } from "../transport/transport";
 import type { Device, Flow, FlowContext } from "../engine/types";
-import { reinstallLinuxFlow } from "../flow/reinstall-linux";
+import { SDP_PID_BOOTROM, SDP_PID_SPL, SDP_VID } from "../protocol/sdp";
+import { reinstallLinuxFlow, osInstallSteps, chooseOsStep } from "../flow/reinstall-linux";
 import { configureFlow } from "../flow/configure";
 
-/**
- * Browser USB filters for the C60 in fastboot mode. Once our U-Boot is on the
- * C60 its fastboot gadget matches these; these drive the USB chooser for the
- * Install/Configure flows (post-boot, so browser-reachable like the TC8).
- *
- * TODO(c60-firmware): confirm the C60 fastboot VID/PID. The handoff reports the
- * C60 U-Boot gadget enumerates as `1fc9:0152` (same as our TC8 stage-2).
- */
+/** The C60 U-Boot fastboot gadget (post-boot), for the Install/Configure choosers. */
 export const C60_FILTERS: UsbFilter[] = [
-  { vendorId: 0x1fc9, productId: 0x0152 }, // our U-Boot fastboot gadget on the C60
+  { vendorId: 0x1fc9, productId: 0x0152 },
 ];
 
-/**
- * Fetch the C60 boot recipe from the artifact manifest: our U-Boot (`flash.bin`,
- * loaded via SDP) plus the slot boot sequence + CR-hammer window. Kept in the
- * manifest (not hardcoded) because the `mmc read`/`cp.b` addresses in the boot
- * sequence are build-specific — they depend on the packed kernel size and must be
- * regenerated with each image build (see BOOT_RECIPES.md).
- */
-async function fetchC60Recipe(
-  ctx: FlowContext,
-): Promise<{ flashBin: Uint8Array; cmds: string[]; hammerSecs: number }> {
-  ctx.log("fetching the C60 boot recipe + open U-Boot (flash.bin)");
+/** Fetch our U-Boot (`flash.bin`) once per run — loaded into RAM over SDP. */
+async function getFlash(ctx: FlowContext, cache: { bin: Uint8Array | null }): Promise<Uint8Array> {
+  if (cache.bin) return cache.bin;
   const man = await ctx.artifacts.manifest("c60-manifest.json");
   const fb = man?.flashbin;
   if (!fb || !fb.url) throw new Error("c60 manifest has no flashbin.url");
-  const flashBin = await ctx.artifacts.binary(fb.url);
-  const cmds: string[] = man?.bootSeq?.a ?? [];
-  const hammerSecs: number = typeof man?.hammerSecs === "number" ? man.hammerSecs : 14;
-  ctx.log(
-    "flash.bin: " + flashBin.byteLength + " bytes; slot-A boot sequence: " + cmds.length + " commands",
-  );
-  return { flashBin, cmds, hammerSecs };
+  cache.bin = await ctx.artifacts.binary(fb.url);
+  ctx.log("open U-Boot (flash.bin): " + cache.bin.byteLength + " bytes");
+  return cache.bin;
 }
 
 /**
- * The C60 "Unlock and Install" flow — NATIVE ONLY (`nativeOnly`). Runs the proven
- * UUU handoff: SDP → `uuu -b spl flash.bin` (loads our U-Boot into DRAM) → interrupt
- * autoboot over UART → boot slot A (our Debian). Delegates the whole USB+UART dance
- * to `Backend.c60Provision`, which the native backend implements over `uuu` + the
- * `serialport` crate; the web backend leaves it undefined (this flow never runs in a
- * browser — it's greyed "Native app required").
- *
- * NOTE: today this is a DRAM boot of a pre-flashed slot A (images flashed once via
- * the U-Boot fastboot gadget). Persistent autoboot (a `bootcmd` macro so the C60
- * boots without the host) and in-app image flashing are the next phase — see the
- * TODOs in BOOT_RECIPES.md.
+ * The C60 "Unlock and Install" flow — browser-native (WebHID SDP). Loads our
+ * U-Boot over the BootROM (SPL) then the SPL's download gadget (U-Boot FIT); the
+ * device boots and drops into fastboot, then the shared OS-install steps flash Linux
+ * over WebUSB — the same tail as the TC8 unlock.
  */
 export function c60UnlockFlow(): Flow {
+  const flash: { bin: Uint8Array | null } = { bin: null };
   return {
     id: "unlock",
-    title: "Unlock and Boot",
-    summary: "Load the open bootloader over USB recovery and boot Linux. Native app only.",
-    nativeOnly: true,
+    title: "Unlock and Install",
+    summary: "Load the open bootloader over USB recovery and install Linux — all in the browser.",
     steps: [
       {
         id: "intro",
@@ -80,53 +54,83 @@ export function c60UnlockFlow(): Flow {
         rail: "Overview",
         title: "Unlock this device",
         body:
-          "Loads the open bootloader over the device's USB recovery mode and boots Linux. " +
-          "This uses low-level USB recovery (i.MX SDP / UUU) that a browser can't perform, so " +
-          "it runs in the native app only. You'll need both the USB and serial cables connected.",
+          "A one-time setup that loads the open bootloader over the device's USB recovery mode, " +
+          "then installs Linux. It runs entirely in this browser — no app or driver to install. " +
+          "Use Chrome or Edge.",
       },
+      chooseOsStep(),
       {
-        id: "sdp-prep",
+        id: "settings",
         type: "confirm",
-        rail: "Enter recovery",
-        title: "Put the device into recovery mode",
+        rail: "Settings",
+        title: "Choose what to apply",
         body:
-          "Set both BOOT_MODE switches to OFF so the chip enters serial-download (SDP) mode, " +
-          "then connect the USB cable and the serial adapter. Press Continue when it's connected — " +
-          "the app will wait for the device to appear.",
+          "Set the values you want this device to start with. Anything you leave blank is left at " +
+          "its default; they're written during install and applied on first boot. Press Continue.",
         confirmLabel: "Continue",
       },
       {
-        id: "uuu-boot",
-        type: "action",
-        rail: "Load + boot",
-        title: "Loading the bootloader and booting Linux",
+        id: "recovery",
+        type: "info",
+        rail: "Enter recovery",
+        title: "Put the device into recovery mode",
         body:
-          "Loading the open bootloader over USB recovery, then interrupting its autoboot and " +
-          "booting the installed Linux slot. Keep both cables connected.",
-        run: async (ctx: FlowContext) => {
-          if (!ctx.backend.c60Provision)
-            throw new Error(
-              "C60 unlock needs the native app — USB recovery (UUU/SDP) has no browser support.",
-            );
-          const { flashBin, cmds, hammerSecs } = await fetchC60Recipe(ctx);
-          if (!cmds.length)
-            throw new Error("c60 manifest has no slot-A boot sequence (bootSeq.a)");
-          await ctx.backend.c60Provision({
-            flashBin,
-            hammerSecs,
-            cmds,
-            onLog: ctx.log,
-          });
-          ctx.log("boot sequence sent — the C60 should be booting Linux.");
+          "Set both BOOT_MODE switches to OFF so the chip enters USB serial-download mode, then " +
+          "connect the USB cable. Press Next when it's connected.",
+      },
+      {
+        id: "connect-bootrom",
+        type: "confirm",
+        rail: "Connect recovery",
+        title: "Connect the recovery device",
+        body:
+          "Press Continue and choose the recovery device from the list (it appears as a vendor " +
+          "HID device).",
+        confirmLabel: "Continue",
+        gesture: "connect-hid",
+        hidFilters: [{ vendorId: SDP_VID, productId: SDP_PID_BOOTROM }],
+      },
+      {
+        id: "load-spl",
+        type: "action",
+        rail: "Load bootloader",
+        title: "Loading the bootloader",
+        body: "Loading the first stage and bringing up memory. The device will re-appear as a new device.",
+        run: async (ctx) => {
+          await ctx.connectHid();
+          const bin = await getFlash(ctx, flash);
+          await ctx.sdp.bootSpl(bin, ctx.log);
         },
       },
       {
-        id: "done",
-        type: "done",
-        rail: "Done",
-        title: "Booting Linux",
-        body: "The open bootloader is loaded and the device is booting the installed Linux slot.",
+        id: "connect-spl",
+        type: "confirm",
+        rail: "Reconnect",
+        title: "Connect the download device",
+        body:
+          "The first stage is up and the device re-appeared. Press Continue and choose it from the " +
+          "list again (it shows as a USB download gadget).",
+        confirmLabel: "Continue",
+        gesture: "connect-hid",
+        hidFilters: [{ vendorId: SDP_VID, productId: SDP_PID_SPL }],
       },
+      {
+        id: "load-uboot",
+        type: "action",
+        rail: "Boot U-Boot",
+        title: "Starting the open bootloader",
+        body: "Loading and starting the open bootloader. The device will boot into programming mode.",
+        run: async (ctx) => {
+          await ctx.connectHid();
+          const bin = await getFlash(ctx, flash);
+          await ctx.sdp.bootUboot(bin, ctx.log);
+        },
+      },
+      ...osInstallSteps(
+        "os",
+        "The open bootloader is starting and the device will enter programming mode. When it does, " +
+          "connect it over USB, then press Continue and choose it from the list.",
+      ),
     ],
   };
 }

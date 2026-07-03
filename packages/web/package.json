@@ -14,8 +14,8 @@
   },
   "dependencies": {
     "@provisioner/core": "*",
-    "@tauri-apps/api": "^2.1.1",
     "@radix-ui/react-slot": "^1.1.1",
+    "@tauri-apps/api": "^2.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
@@ -26,6 +26,7 @@
   "devDependencies": {
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@types/w3c-web-hid": "^1.0.7",
     "@types/w3c-web-serial": "^1.0.6",
     "@types/w3c-web-usb": "^1.0.10",
     "@vitejs/plugin-react": "^4.3.4",

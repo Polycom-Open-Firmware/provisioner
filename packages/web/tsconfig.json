@@ -4,7 +4,7 @@
     "outDir": "dist",
     "jsx": "react-jsx",
     "baseUrl": ".",
-    "types": ["w3c-web-usb", "w3c-web-serial", "vite/client"],
+    "types": ["w3c-web-usb", "w3c-web-serial", "w3c-web-hid", "vite/client"],
     "paths": {
       "@/*": ["src/*"],
       "@provisioner/core": ["../core/src/index.ts"]

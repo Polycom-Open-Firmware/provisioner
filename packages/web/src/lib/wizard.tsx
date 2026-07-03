@@ -189,11 +189,12 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
 
     // confirm
     const gesture = step.gesture;
-    if (gesture === "connect-usb" || gesture === "connect-serial") {
+    if (gesture === "connect-usb" || gesture === "connect-serial" || gesture === "connect-hid") {
       setState((x) => ({ ...x, busy: true, error: null }));
       try {
         if (gesture === "connect-usb") await runner.attachUsb(s.device?.filters);
-        else await runner.attachSerial();
+        else if (gesture === "connect-serial") await runner.attachSerial();
+        else await runner.attachHid(step.hidFilters ?? [{ vendorId: 0x1fc9 }]);
         runner.confirm();
       } catch (err) {
         setState((x) => ({ ...x, error: (err as Error).message }));

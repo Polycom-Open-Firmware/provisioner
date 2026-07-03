@@ -69,6 +69,34 @@ export interface UsbTransport {
   controlIn(setup: ControlSetup, length: number): Promise<Uint8Array>;
 }
 
+/** Filter passed to the HID device picker (web: navigator.hid.requestDevice). */
+export interface HidFilter {
+  vendorId?: number;
+  productId?: number;
+  usagePage?: number;
+}
+
+/**
+ * HID transport — carries the i.MX Serial Download Protocol (SDP). SDP uses
+ * numbered HID reports: OUTPUT 1 = command, 2 = data; INPUT 3 = HAB, 4 = status.
+ * The web adapter wraps `navigator.hid` (WebHID reaches the BootROM's HID vendor
+ * interface a WebUSB claim can't). Proven on the C60: the whole bootloader loads
+ * from the browser, no driver install.
+ */
+export interface HidTransport {
+  readonly info: DeviceInfo | null;
+  readonly connected: boolean;
+  /** Select + open a matching HID device. Web: requestDevice — MUST run inside a
+   *  real user gesture (like WebUSB/Web Serial). */
+  open(filters: HidFilter[]): Promise<DeviceInfo>;
+  close(): Promise<void>;
+  /** Send an OUTPUT report: `reportId` then `data` (data excludes the id byte). */
+  sendReport(reportId: number, data: Uint8Array): Promise<void>;
+  /** Resolve with the next INPUT report of `reportId` (payload, id stripped), or
+   *  reject on timeout. */
+  readReport(reportId: number, timeoutMs: number): Promise<Uint8Array>;
+}
+
 /** Console-style serial transport — drives the U-Boot prompt during bootstrap. */
 export interface SerialTransport {
   readonly connected: boolean;
@@ -99,6 +127,9 @@ export interface Backend {
   readonly kind: "web" | "native";
   usb(): UsbTransport;
   serial(): SerialTransport;
+  /** HID transport for i.MX SDP (WebHID web-side). Optional — a backend without a
+   *  HID path leaves it undefined and SDP-based flows fall back / stay gated. */
+  hid?(): HidTransport;
   /** Native-only: bind WinUSB to a device so it can be opened at all (libwdi). */
   bindWinUsb?(info: DeviceInfo): Promise<void>;
   /**

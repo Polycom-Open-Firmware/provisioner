@@ -13,6 +13,15 @@ export { Fastboot, FASTBOOT_FILTERS, FASTBOOT_INTERFACE } from "./protocol/fastb
 export type { InfoCb, ProgressCb } from "./protocol/fastboot";
 export { parseSparse, planResparse, flashSparse } from "./protocol/sparse";
 export { UBootConsole, PROMPT } from "./protocol/uboot-console";
+export {
+  Sdp,
+  SDP_VID,
+  SDP_PID_BOOTROM,
+  SDP_PID_SPL,
+  UBOOT_TEXT_BASE,
+  findIvt,
+  findFitMagic,
+} from "./protocol/sdp";
 
 // Engine
 export * from "./engine/types";

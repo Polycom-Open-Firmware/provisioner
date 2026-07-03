@@ -6,11 +6,20 @@
 // calls attachUsb()/attachSerial() from its gesture-button handler; action steps
 // that need a channel await ctx.connectUsb()/connectSerial(), which resolve once
 // the gesture has attached it (mirrors the pathfinder's awaitUsb pattern).
-import type { Backend, UsbFilter } from "../transport/transport";
+import type { Backend, HidFilter, HidTransport, UsbFilter } from "../transport/transport";
 import { Fastboot, FASTBOOT_FILTERS } from "../protocol/fastboot";
 import { UBootConsole } from "../protocol/uboot-console";
+import { Sdp } from "../protocol/sdp";
 import type { Artifacts, Flow, FlowContext, Step } from "./types";
 import { Emitter, defer, type Deferred } from "./emitter";
+
+/** A HID transport that errors on use — for backends with no HID (SDP) path, so
+ *  ctx.sdp always exists but SDP-based flows fail clearly rather than null-deref. */
+function unavailableHid(): HidTransport {
+  const no = (): Promise<never> =>
+    Promise.reject(new Error("this backend has no HID (SDP) transport"));
+  return { info: null, connected: false, open: no, close: no, sendReport: no, readReport: no };
+}
 
 export interface RunnerOptions {
   backend: Backend;
@@ -23,17 +32,20 @@ export class WizardRunner {
   private artifacts: Artifacts;
   private readonly fb: Fastboot;
   private readonly uboot: UBootConsole;
+  private readonly sdp: Sdp;
 
   private flow: Flow | null = null;
   private index = -1;
   private usbReady: Deferred<void> | null = null;
   private serialReady: Deferred<void> | null = null;
+  private hidReady: Deferred<void> | null = null;
 
   constructor(opts: RunnerOptions) {
     this.backend = opts.backend;
     this.artifacts = opts.artifacts;
     this.fb = new Fastboot(this.backend.usb());
     this.uboot = new UBootConsole(this.backend.serial());
+    this.sdp = new Sdp(this.backend.hid ? this.backend.hid() : unavailableHid());
   }
 
   get currentStep(): Step | null {
@@ -93,6 +105,13 @@ export class WizardRunner {
     this.serialReady?.resolve();
   }
 
+  /** Called from the gesture button's click handler; opens a HID (SDP) device.
+   *  requestDevice must run inside the user gesture, so this happens on click. */
+  async attachHid(filters: HidFilter[]): Promise<void> {
+    await this.sdp.hid.open(filters);
+    this.hidReady?.resolve();
+  }
+
   private context(): FlowContext {
     const log = (msg: string) =>
       this.events.emit({ type: "console", ts: Date.now(), msg });
@@ -108,15 +127,23 @@ export class WizardRunner {
       this.serialReady = defer<void>();
       return this.serialReady.promise;
     };
+    // Unlike USB/serial, each SDP stage opens a DIFFERENT HID device (BootROM then
+    // the SPL gadget), so connectHid always waits for the fresh gesture's attach.
+    const connectHid = () => {
+      this.hidReady = defer<void>();
+      return this.hidReady.promise;
+    };
     return {
       backend: this.backend,
       artifacts: this.artifacts,
       fb: this.fb,
       uboot: this.uboot,
+      sdp: this.sdp,
       log,
       progress,
       connectUsb,
       connectSerial,
+      connectHid,
     };
   }
 
