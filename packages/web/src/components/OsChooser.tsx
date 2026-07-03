@@ -1,13 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 // OsChooser — lists the available OS builds (tc8-firmware-build GitHub releases,
-// plus the temporary local artifacts in local dev) and lets the operator pick
-// one. Picking swaps the artifact source and advances.
+// plus the temporary local artifacts in local dev) as a compact dropdown. The
+// newest build is auto-selected, so a single option needs no interaction; picking
+// another swaps the artifact source (Continue advances). Rendered on Setup /
+// Choose-OS screens.
 import * as React from "react";
-import { HardDrive, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useWizard } from "@/lib/wizard";
 import { listOsBuilds, type OsBuild } from "@/os-catalog";
-import { Badge } from "@/components/ui/badge";
+
+function optionLabel(b: OsBuild): string {
+  const tags = [b.prerelease ? "pre" : null, b.local ? "dev" : null].filter(Boolean).join(" · ");
+  const where = b.local ? "./artifacts" : b.tag;
+  return `${b.name}${tags ? ` · ${tags}` : ""} — ${where}`;
+}
 
 export function OsChooser() {
   const { selectOs, selectedOs } = useWizard();
@@ -24,16 +31,22 @@ export function OsChooser() {
     }
   }, []);
 
-  // initial load uses the cached list; the refresh button forces a fresh pull
   React.useEffect(() => {
     void refresh(false);
   }, [refresh]);
+
+  // Auto-select the newest build once loaded (and if the current pick vanished on
+  // a refresh) — so a single option is zero-click and Continue always has a build.
+  React.useEffect(() => {
+    if (!builds || builds.length === 0) return;
+    if (!selectedOs || !builds.some((b) => b.tag === selectedOs.tag)) selectOs(builds[0]!);
+  }, [builds, selectedOs, selectOs]);
 
   return (
     <div className="mt-6">
       <div className="mb-2 flex items-center justify-between">
         <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-          OS builds
+          OS build
         </div>
         <button
           onClick={() => refresh(true)}
@@ -47,27 +60,22 @@ export function OsChooser() {
       {!err && builds === null && <div className="text-[13px] text-muted">Loading builds…</div>}
       {!err && builds?.length === 0 && <div className="text-[13px] text-muted">No OS builds found.</div>}
 
-      <div className="flex flex-col gap-2">
-        {builds?.map((b) => (
-          <button
-            key={b.tag}
-            onClick={() => selectOs(b)}
-            className={`flex items-center justify-between rounded-[8px] border bg-background px-4 py-3 text-left transition hover:border-primary ${
-              selectedOs?.tag === b.tag ? "border-primary ring-1 ring-primary" : "border-border"
-            }`}
-          >
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[15px] font-semibold text-foreground">{b.name}</span>
-                {b.prerelease && <Badge>Pre</Badge>}
-                {b.local && <Badge>Dev</Badge>}
-              </div>
-              <div className="font-mono text-[12px] text-muted">{b.local ? "./artifacts" : b.tag}</div>
-            </div>
-            <HardDrive className="h-4 w-4 shrink-0 text-muted" />
-          </button>
-        ))}
-      </div>
+      {builds && builds.length > 0 && (
+        <select
+          value={selectedOs?.tag ?? builds[0]!.tag}
+          onChange={(e) => {
+            const b = builds.find((x) => x.tag === e.target.value);
+            if (b) selectOs(b);
+          }}
+          className="w-full rounded-[8px] border border-border bg-background px-3 py-2.5 text-[15px] text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+        >
+          {builds.map((b) => (
+            <option key={b.tag} value={b.tag}>
+              {optionLabel(b)}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }
