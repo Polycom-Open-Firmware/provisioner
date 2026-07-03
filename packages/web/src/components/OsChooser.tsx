@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-// OsChooser — lists the available OS builds (tc8-firmware-build GitHub releases,
-// plus the temporary local artifacts in local dev) as a compact dropdown. The
-// newest build is auto-selected, so a single option needs no interaction; picking
-// another swaps the artifact source (Continue advances). Rendered on Setup /
-// Choose-OS screens.
+// OsChooser — lists the available OS builds (the selected device's firmware-repo
+// GitHub releases, plus the temporary local artifacts in local dev) as a compact
+// dropdown. The newest build is auto-selected, so a single option needs no
+// interaction; picking another swaps the artifact source (Continue advances).
+// Rendered on Setup / Choose-OS screens.
 import * as React from "react";
 import { useWizard } from "@/lib/wizard";
 import { Select } from "@/components/ui/select";
 import { PickerHeader } from "@/components/PickerHeader";
-import { listOsBuilds, type OsBuild } from "@/os-catalog";
+import { listOsBuilds, type DeviceId, type OsBuild } from "@/os-catalog";
 
 function optionLabel(b: OsBuild): string {
   const tags = [b.prerelease ? "pre" : null, b.local ? "dev" : null].filter(Boolean).join(" · ");
@@ -18,19 +18,23 @@ function optionLabel(b: OsBuild): string {
 }
 
 export function OsChooser() {
-  const { selectOs, selectedOs } = useWizard();
+  const { selectOs, selectedOs, device } = useWizard();
+  const deviceId = (device?.id as DeviceId) ?? "tc8";
   const [builds, setBuilds] = React.useState<OsBuild[] | null>(null);
   const [err, setErr] = React.useState<string | null>(null);
 
-  const refresh = React.useCallback(async (fresh = false) => {
-    setBuilds(null);
-    setErr(null);
-    try {
-      setBuilds(await listOsBuilds(fresh));
-    } catch (e) {
-      setErr((e as Error).message);
-    }
-  }, []);
+  const refresh = React.useCallback(
+    async (fresh = false) => {
+      setBuilds(null);
+      setErr(null);
+      try {
+        setBuilds(await listOsBuilds(deviceId, fresh));
+      } catch (e) {
+        setErr((e as Error).message);
+      }
+    },
+    [deviceId],
+  );
 
   React.useEffect(() => {
     void refresh(false);

@@ -22,7 +22,7 @@ import {
 import { webBackend } from "@/backend";
 import { isTauri, nativeBackend } from "@/native/backend";
 import { HttpArtifacts } from "@/artifacts";
-import { artifactsFor, type OsBuild } from "@/os-catalog";
+import { artifactsFor, type DeviceId, type OsBuild } from "@/os-catalog";
 
 export type Phase = "pick-device" | "pick-flow" | "in-flow";
 export interface ConsoleLine {
@@ -177,7 +177,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
   };
 
   const selectOs = (build: OsBuild) => {
-    runner.useArtifacts(artifactsFor(build));
+    runner.useArtifacts(artifactsFor(build, (stateRef.current.device?.id as DeviceId) ?? "tc8"));
     setState((x) => ({ ...x, selectedOs: build }));
   };
 

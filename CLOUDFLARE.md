@@ -36,6 +36,16 @@ browser → wizard.openpolycom.cc/artifact/<tag>/<asset>
 A *redirect* would not work — it would bounce the browser to GitHub and hit the
 CORS wall again. This is a true proxy.
 
+### Multiple firmware repos (per-device)
+
+Each device draws from its own firmware repo, selected by a small allowlist in
+the Functions (one entry per device, nothing else proxied):
+
+- `/releases` and `/artifact/<tag>/<asset>` → `tc8-firmware-build` (the
+  default, so clients shipped before the device key existed keep working)
+- `/releases?device=c60` and `/artifact/c60/<tag>/<asset>` → the C60 firmware
+  repo
+
 ### New releases need zero work here
 
 The route is parameterized (`[[path]]` = `<tag>/<asset>`), so it resolves any tag
@@ -43,10 +53,12 @@ on the fly. Tag a new firmware release on GitHub and:
 - it auto-appears in the OS chooser (live GitHub API query), and
 - it flashes through the same proxy unchanged.
 
-No new "proxy entry", no redeploy. The only things that would ever need a code
-change: switching the firmware **repo** (constant in the Function + `os-catalog.ts`)
-or **renaming** the standard assets (`rootfs.simg`/`boot.img`/`dtbo.img`/
-`vbmeta.img`/`tc8-stage2-uboot.bin`) — neither happens on a normal release.
+No new proxy entry, no redeploy. The only things that would ever need a code
+change: adding or switching a firmware **repo** (the allowlist map in both
+Functions) or **renaming** the standard TC8 assets (`rootfs.simg`/`boot.img`/
+`dtbo.img`/`vbmeta.img`/`tc8-stage2-uboot.bin`) — neither happens on a normal
+release. C60 releases are manifest-driven (`c60-manifest.json` names its own
+assets), so C60 asset names can change freely.
 
 ## One-time setup
 

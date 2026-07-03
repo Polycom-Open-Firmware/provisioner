@@ -7,9 +7,16 @@
 // so the multi-GB rootfs streams free. Catch-all route → any tag/asset, no per-
 // release config.
 //
-// Route: GET /artifact/<tag>/<asset>   e.g. /artifact/v0.4.1/rootfs.simg
+// Route: GET /artifact/<tag>/<asset>            e.g. /artifact/v0.4.1/rootfs.simg
+//        GET /artifact/<device>/<tag>/<asset>   e.g. /artifact/c60/v0.1.0/flash.bin
+//
+// An optional leading device segment selects the source repo from the allowlist;
+// without one it's tc8, so clients shipped before the segment existed keep working.
 
-const REPO = "Polycom-Open-Firmware/tc8-firmware-build";
+const REPOS = {
+  tc8: "Polycom-Open-Firmware/tc8-firmware-build",
+  c60: "Polycom-Open-Firmware/c60-firmware-build",
+};
 const CORS = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, OPTIONS",
@@ -19,8 +26,9 @@ export async function onRequest({ request, params }) {
   if (request.method === "OPTIONS") return new Response(null, { headers: CORS });
 
   const parts = Array.isArray(params.path) ? params.path : [params.path];
+  const repo = parts.length >= 3 && REPOS[parts[0]] ? REPOS[parts.shift()] : REPOS.tc8;
   if (parts.length < 2) {
-    return new Response("usage: /artifact/<tag>/<asset>", { status: 400, headers: CORS });
+    return new Response("usage: /artifact/[device/]<tag>/<asset>", { status: 400, headers: CORS });
   }
   const asset = parts.pop();
   const tag = parts.join("/");
@@ -29,7 +37,7 @@ export async function onRequest({ request, params }) {
   }
 
   const upstream = await fetch(
-    `https://github.com/${REPO}/releases/download/${tag}/${asset}`,
+    `https://github.com/${repo}/releases/download/${tag}/${asset}`,
     { redirect: "follow" },
   );
   if (!upstream.ok && upstream.status !== 206) {
