@@ -121,6 +121,12 @@ function bootData(buf, ivt) {
   if (foff < 0 || foff + 12 > buf.length) return null;
   return { start: rd32(buf, foff), size: rd32(buf, foff + 4) };
 }
+// First FDT/FIT magic (0xd00dfeed, big-endian) at/after `from` — the u-boot.itb.
+function findFitMagic(buf, from) {
+  for (let i = from; i + 4 <= buf.length; i++)
+    if (buf[i] === 0xd0 && buf[i + 1] === 0x0d && buf[i + 2] === 0xfe && buf[i + 3] === 0xed) return i;
+  return -1;
+}
 
 document.getElementById('file').onchange = async (e) => {
   const f = e.target.files[0]; if (!f) return;
@@ -134,25 +140,21 @@ document.getElementById('file').onchange = async (e) => {
     const splLen = sbd.size - (spl.selfAddr - sbd.start);
     stage1 = { addr: spl.selfAddr, off: spl.fileOff, len: splLen };
 
-    const rest = spl.fileOff + splLen;
-    const ub = findIvt(flash, rest, 0x100000);
-    if (ub) {
-      // The container's entry can sit BELOW its IVT (C60 U-Boot: entry 0x401fadc0,
-      // IVT self 0x401fbdc0). Load from the container base (entry) so the entry
-      // point is actually populated, with the IVT landing at entry+headroom; then
-      // jump to the IVT (self) — that's what the SPL's f_sdp reads to boot.
-      const head = ub.selfAddr - ub.entry;              // IVT offset within the image
-      const base = head > 0 ? ub.fileOff - head : ub.fileOff;
-      const addr = head > 0 ? ub.entry : ub.selfAddr;   // load address
-      stage2 = { addr, off: base, len: flash.length - base, jump: ub.selfAddr };
-    }
+    // Stage 2: the U-Boot FIT (u-boot.itb). Find its FDT magic (0xd00dfeed) and
+    // load it to the U-Boot text base — imx-mkimage packs it with
+    // `-second_loader u-boot.itb 0x40200000` and CONFIG_TEXT_BASE=0x40200000. Jump
+    // there so the SPL's FIT loader parses it (extracts bl31 + u-boot). (An earlier
+    // IVT-derived address 0x401fadc0 was a spurious barker match — off by 0x3240.)
+    const UBOOT_LOAD = 0x40200000;
+    const fitOff = findFitMagic(flash, spl.fileOff + splLen);
+    if (fitOff >= 0) stage2 = { addr: UBOOT_LOAD, off: fitOff, len: flash.length - fitOff, jump: UBOOT_LOAD };
 
     const g = document.getElementById('parse');
     g.innerHTML =
       `<b>SPL (stage 1)</b><span>write ${splLen.toLocaleString()} B @ file ${hx(spl.fileOff)} → load ${hx(spl.selfAddr)}</span>` +
-      (ub ? `<b>U-Boot (stage 2)</b><span>write ${stage2.len.toLocaleString()} B @ file ${hx(stage2.off)} → load ${hx(stage2.addr)} (jump ${hx(stage2.jump)})</span>`
-          : `<b>U-Boot (stage 2)</b><span class="l-warn">second IVT not found — stage 2 disabled</span>`);
-    log(`parsed flash.bin: SPL ${splLen} B → ${hx(spl.selfAddr)}` + (ub ? `, U-Boot ${stage2.len} B → ${hx(ub.selfAddr)}` : ''), 'ok');
+      (fitOff >= 0 ? `<b>U-Boot FIT (stage 2)</b><span>write ${stage2.len.toLocaleString()} B @ file ${hx(fitOff)} → load ${hx(UBOOT_LOAD)} (jump ${hx(UBOOT_LOAD)})</span>`
+          : `<b>U-Boot FIT (stage 2)</b><span class="l-warn">FIT magic not found — stage 2 disabled</span>`);
+    log(`parsed flash.bin: SPL ${splLen} B → ${hx(spl.selfAddr)}` + (fitOff >= 0 ? `, U-Boot FIT ${stage2.len} B → ${hx(UBOOT_LOAD)}` : ''), 'ok');
     document.getElementById('s1').disabled = false;
   } catch (err) {
     log('parse failed: ' + err.message, 'err');

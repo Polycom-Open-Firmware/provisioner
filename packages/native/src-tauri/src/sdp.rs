@@ -147,6 +147,16 @@ pub fn spl_image_len(ivt: &Ivt, bd: &BootData) -> usize {
     (bd.image_size as usize).saturating_sub((ivt.self_addr - bd.image_start_addr) as usize)
 }
 
+/// First FDT/FIT magic (0xd00dfeed, big-endian) at/after `from` — the u-boot.itb.
+pub fn find_fit_magic(buf: &[u8], from: usize) -> Option<usize> {
+    (from..buf.len().saturating_sub(3)).find(|&i| buf[i..i + 4] == [0xd0, 0x0d, 0xfe, 0xed])
+}
+
+/// i.MX8MM U-Boot text base (`CONFIG_TEXT_BASE` / imx-mkimage `-second_loader … 0x40200000`).
+/// The u-boot.itb FIT loads here; the SPL's FIT loader unpacks bl31 + u-boot. Verified
+/// on a real C60 via the WebHID PoC. TODO(c60): make configurable per build/SoC.
+pub const UBOOT_TEXT_BASE: u32 = 0x4020_0000;
+
 // ---- HID transport (nusb) -----------------------------------------------------
 
 /// One SDP HID device (BootROM or SPL/SDPV). Reports go out on the interrupt OUT
@@ -327,21 +337,21 @@ impl HidSdp {
         self.jump(ivt.self_addr)
     }
 
-    /// Stage 2 (SPL "SDPV"): load the rest of flash.bin (the U-Boot FIT container,
-    /// which carries its own IVT) into DRAM and jump.
+    /// Stage 2 (SPL "SDPV"): load the U-Boot FIT (u-boot.itb) to the text base and
+    /// jump there so the SPL's FIT loader unpacks bl31 + u-boot. Verified on a real
+    /// C60 via the WebHID PoC: find the FIT's FDT magic after the SPL, write from
+    /// there to EOF at 0x40200000, jump 0x40200000. (NOT the second-IVT self address
+    /// — that was a spurious barker match, off by 0x3240, and aborted.)
     pub fn boot_uboot(&mut self, flash: &[u8], log: &mut dyn FnMut(&str)) -> Result<(), String> {
         let spl = find_ivt(flash, 0, 0x100000).ok_or("no SPL IVT")?;
         let bd = read_boot_data(flash, &spl).ok_or("no SPL BootData")?;
         let rest = spl.file_off + spl_image_len(&spl, &bd);
-        let ivt = find_ivt(flash, rest, 0x100000).ok_or("no U-Boot IVT after the SPL")?;
-        let bd2 = read_boot_data(flash, &ivt).ok_or("no U-Boot BootData")?;
-        let img = flash
-            .get(ivt.file_off..ivt.file_off + bd2.image_size as usize)
-            .ok_or("U-Boot image range out of bounds")?;
-        log(&format!("SDPV: writing U-Boot ({} B) to {:#010x}", img.len(), ivt.self_addr));
-        self.write_file(ivt.self_addr, img)?;
-        log(&format!("SDPV: jump {:#010x}", ivt.self_addr));
-        self.jump(ivt.self_addr)
+        let fit = find_fit_magic(flash, rest).ok_or("no U-Boot FIT (0xd00dfeed) after the SPL")?;
+        let img = &flash[fit..];
+        log(&format!("SDPV: writing U-Boot FIT ({} B) to {:#010x}", img.len(), UBOOT_TEXT_BASE));
+        self.write_file(UBOOT_TEXT_BASE, img)?;
+        log(&format!("SDPV: jump {:#010x}", UBOOT_TEXT_BASE));
+        self.jump(UBOOT_TEXT_BASE)
     }
 }
 
@@ -418,6 +428,14 @@ mod tests {
         assert_eq!(bd.image_size, 0x4000);
         // self==start here, so skip length == image size.
         assert_eq!(spl_image_len(&ivt, &bd), 0x4000);
+    }
+
+    #[test]
+    fn finds_fit_magic() {
+        let mut buf = vec![0u8; 0x200];
+        buf[0x100..0x104].copy_from_slice(&[0xd0, 0x0d, 0xfe, 0xed]); // FDT magic, big-endian
+        assert_eq!(find_fit_magic(&buf, 0), Some(0x100));
+        assert_eq!(find_fit_magic(&buf, 0x101), None);
     }
 
     #[test]
