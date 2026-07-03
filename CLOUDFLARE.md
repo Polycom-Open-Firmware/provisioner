@@ -28,15 +28,15 @@ applies; the Function fetches the asset from GitHub server-side and **streams th
 bytes back** (no buffering — the multi-GB rootfs is fine):
 
 ```
-browser → openpolycom.cc/artifact/<tag>/<asset>
+browser → wizard.openpolycom.cc/artifact/<tag>/<asset>
             → Function fetch()s github.com/.../releases/download/<tag>/<asset>
             → pipes the response body back, same origin
 ```
 
-A *redirect* would NOT work — it would bounce the browser to GitHub and hit the
+A *redirect* would not work — it would bounce the browser to GitHub and hit the
 CORS wall again. This is a true proxy.
 
-### New releases need **zero** work here
+### New releases need zero work here
 
 The route is parameterized (`[[path]]` = `<tag>/<asset>`), so it resolves any tag
 on the fly. Tag a new firmware release on GitHub and:
@@ -73,15 +73,16 @@ Pages auto-discovers `functions/` at the repo root, so the proxy ships with the
 site. You get a `*.pages.dev` URL immediately.
 
 ### 3. Custom domain
-Pages project → **Custom domains** → add `openpolycom.cc` (and `www`). Since the
+Pages project → **Custom domains** → add `wizard.openpolycom.cc`. Since the
 zone is on Cloudflare it creates the proxied `CNAME → *.pages.dev` for you and
 provisions TLS. (Manual equivalent: `CNAME @ → <project>.pages.dev`, Proxied.)
 
-## Cost & limits
+## Cost and limits
 
-- **Function requests: 100,000 / day** (Pages Functions run on the Workers free
-  tier; resets daily). Static SPA serving is unlimited/free. ≈ 5 Function hits per
-  full flash (one per asset) ⇒ ~20k flashes/day of headroom.
+- **Function requests: 100,000 a day** (Pages Functions run on the Workers free
+  tier; resets daily). Static SPA serving is unlimited and free. About five
+  Function hits per full flash (one per asset) — roughly 20,000 flashes a day
+  of headroom.
 - **Egress bandwidth: $0, unmetered** across Cloudflare (CDN/Workers/Pages/R2).
   The big rootfs streams cost nothing.
 - **CPU: 10 ms/invocation** — irrelevant for an I/O-bound streaming proxy.

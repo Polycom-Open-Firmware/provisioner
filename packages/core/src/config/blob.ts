@@ -92,7 +92,8 @@ export function buildConfigBlob(fields: ConfigFields): Promise<Uint8Array> {
 }
 
 // --- bootloader update (rides the same cache write) --------------------------
-// Contract: tc8-firmware-build/BOOTLOADER-UPDATE.md. The wizard never writes the
+// Contract: tc8-firmware-build/CONFIG-PARTITION.md (bootloader-update section).
+// The wizard never writes the
 // eMMC boot1 HW partition directly; it stages the stage-2 image in `cache` (at
 // 1 MiB, after the config blob) and the running OS flashes boot1 on the next boot
 // (sha256-verified, idempotent, can't brick — boot0 is untouched).
