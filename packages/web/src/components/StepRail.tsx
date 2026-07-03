@@ -3,6 +3,7 @@
 import { Check } from "lucide-react";
 import { useWizard } from "@/lib/wizard";
 import { cn } from "@/lib/utils";
+import { Caption } from "@/components/ui/caption";
 
 export function StepRail() {
   const { flow, stepIndex } = useWizard();
@@ -10,9 +11,7 @@ export function StepRail() {
 
   return (
     <aside className="w-[228px] shrink-0 border-r border-border bg-rail p-4">
-      <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-        {flow.title}
-      </div>
+      <Caption>{flow.title}</Caption>
       <ol className="mt-4 flex flex-col">
         {flow.steps.map((s, i) => {
           const phase = i < stepIndex ? "done" : i === stepIndex ? "current" : "todo";

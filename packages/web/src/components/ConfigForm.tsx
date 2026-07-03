@@ -14,6 +14,7 @@ import * as React from "react";
 import { configStore, type ConfigFields, type ConfigKey } from "@provisioner/core";
 import { useWizard } from "@/lib/wizard";
 import { Input } from "@/components/ui/input";
+import { Caption } from "@/components/ui/caption";
 
 interface FieldDef {
   key: ConfigKey;
@@ -51,9 +52,7 @@ export function ConfigForm() {
     <div className="mt-6 flex flex-col gap-4">
       {FIELDS.map((f) => (
         <label key={f.key} className="flex flex-col gap-1">
-          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-            {f.label}
-          </span>
+          <Caption>{f.label}</Caption>
           <Input
             type={f.type ?? "text"}
             value={vals[f.key] ?? ""}

@@ -11,6 +11,7 @@ import { NativeSerialPicker } from "./NativeSerialPicker";
 import { NativeUsbPicker } from "./NativeUsbPicker";
 import { ConfigForm } from "./ConfigForm";
 import { OsChooser } from "./OsChooser";
+import { Caption } from "@/components/ui/caption";
 import { isTauri } from "@/native/backend";
 import type { Gesture } from "@provisioner/core";
 
@@ -69,9 +70,7 @@ export function StepContent() {
           <Check className="h-6 w-6 text-primary" />
         </div>
       ) : (
-        <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
-          {kindLabel(step.type)}
-        </div>
+        <Caption tone="primary">{kindLabel(step.type)}</Caption>
       )}
 
       <h1 className="mt-2 text-[27px] font-bold tracking-[-0.02em] text-foreground">{step.title}</h1>

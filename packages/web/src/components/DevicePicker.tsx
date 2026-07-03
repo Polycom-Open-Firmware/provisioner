@@ -6,6 +6,7 @@ import { AlertTriangle } from "lucide-react";
 import { useWizard } from "@/lib/wizard";
 import { Badge } from "@/components/ui/badge";
 import { webSupport } from "@/backend";
+import { Caption } from "@/components/ui/caption";
 import { DEVICE_IMAGES } from "@/lib/devices";
 import { CornerBadges } from "./CornerBadges";
 
@@ -41,9 +42,7 @@ export function DevicePicker() {
   return (
     <div className="relative flex flex-1 flex-col items-center justify-center gap-8 p-10">
       <div className="text-center">
-        <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
-          Open Polycom
-        </div>
+        <Caption tone="primary">Open Polycom</Caption>
         <h1 className="mt-2 text-[27px] font-bold tracking-[-0.02em] text-foreground">Pick your device</h1>
         <p className="mt-1 text-[15px] text-body">Unlock it and install Linux over USB.</p>
       </div>

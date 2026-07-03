@@ -3,8 +3,10 @@
 // NativeUsbPicker — desktop has no browser USB chooser. With exactly one matching
 // device we just connect it; with several we list them so the operator can pick.
 import * as React from "react";
-import { RefreshCw, Usb } from "lucide-react";
+import { Usb } from "lucide-react";
 import { useWizard } from "@/lib/wizard";
+import { PickerHeader } from "@/components/PickerHeader";
+import { DeviceRow } from "@/components/DeviceRow";
 import { listUsbDevices, type UsbDeviceDesc } from "@/native/backend";
 
 const hex4 = (n: number) => n.toString(16).padStart(4, "0");
@@ -36,17 +38,7 @@ export function NativeUsbPicker() {
 
   return (
     <div className="mt-6">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-          USB device
-        </div>
-        <button
-          onClick={refresh}
-          className="flex items-center gap-1 font-mono text-[11px] text-muted hover:text-foreground"
-        >
-          <RefreshCw className="h-3 w-3" /> refresh
-        </button>
-      </div>
+      <PickerHeader label="USB device" onRefresh={refresh} />
 
       {listErr && <div className="text-[13px] text-body">Couldn't list devices: {listErr}</div>}
       {!listErr && devices.length === 0 && (
@@ -57,16 +49,12 @@ export function NativeUsbPicker() {
 
       {single &&
         (error ? (
-          <button
+          <DeviceRow
+            title={devices[0]!.product || "USB device"}
+            subtitle={`${label(devices[0]!)} · try again`}
+            icon={<Usb className="h-4 w-4" />}
             onClick={() => connectUsbDevice(devices[0]!)}
-            className="flex w-full items-center justify-between rounded-[8px] border border-border bg-background px-4 py-3 text-left transition hover:border-primary"
-          >
-            <div>
-              <div className="text-[15px] font-semibold text-foreground">{devices[0]!.product || "USB device"}</div>
-              <div className="font-mono text-[12px] text-muted">{label(devices[0]!)} · try again</div>
-            </div>
-            <Usb className="h-4 w-4 shrink-0 text-muted" />
-          </button>
+          />
         ) : (
           <div className="text-[15px] text-body">Connecting to {devices[0]!.product || "the device"}…</div>
         ))}
@@ -76,17 +64,13 @@ export function NativeUsbPicker() {
           <p className="mb-2 text-[13px] text-body">Click your device to connect.</p>
           <div className="flex flex-col gap-2">
             {devices.map((d, i) => (
-              <button
+              <DeviceRow
                 key={(d.serial ?? "") + i}
+                title={d.product || "USB device"}
+                subtitle={label(d)}
+                icon={<Usb className="h-4 w-4" />}
                 onClick={() => connectUsbDevice(d)}
-                className="flex items-center justify-between rounded-[8px] border border-border bg-background px-4 py-3 text-left transition hover:border-primary"
-              >
-                <div>
-                  <div className="text-[15px] font-semibold text-foreground">{d.product || "USB device"}</div>
-                  <div className="font-mono text-[12px] text-muted">{label(d)}</div>
-                </div>
-                <Usb className="h-4 w-4 shrink-0 text-muted" />
-              </button>
+              />
             ))}
           </div>
         </>

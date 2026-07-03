@@ -4,8 +4,10 @@
 // port we just connect it (no chooser); with several we list them so the operator
 // can resolve which is the device.
 import * as React from "react";
-import { Plug, RefreshCw } from "lucide-react";
+import { Plug } from "lucide-react";
 import { useWizard } from "@/lib/wizard";
+import { PickerHeader } from "@/components/PickerHeader";
+import { DeviceRow } from "@/components/DeviceRow";
 import { listSerialPorts, type SerialPortDesc } from "@/native/backend";
 
 export function NativeSerialPicker() {
@@ -34,17 +36,7 @@ export function NativeSerialPicker() {
 
   return (
     <div className="mt-6">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-          Serial port
-        </div>
-        <button
-          onClick={refresh}
-          className="flex items-center gap-1 font-mono text-[11px] text-muted hover:text-foreground"
-        >
-          <RefreshCw className="h-3 w-3" /> refresh
-        </button>
-      </div>
+      <PickerHeader label="Serial port" onRefresh={refresh} />
 
       {listErr && <div className="text-[13px] text-body">Couldn't list ports: {listErr}</div>}
       {!listErr && ports.length === 0 && (
@@ -55,16 +47,12 @@ export function NativeSerialPicker() {
 
       {single &&
         (error ? (
-          <button
+          <DeviceRow
+            title={ports[0]!.name}
+            subtitle={`${ports[0]!.product || ports[0]!.kind} · try again`}
+            icon={<Plug className="h-4 w-4" />}
             onClick={() => connectSerialPort(ports[0]!.name)}
-            className="flex w-full items-center justify-between rounded-[8px] border border-border bg-background px-4 py-3 text-left transition hover:border-primary"
-          >
-            <div>
-              <div className="text-[15px] font-semibold text-foreground">{ports[0]!.name}</div>
-              <div className="text-[12px] text-muted">{ports[0]!.product || ports[0]!.kind} · try again</div>
-            </div>
-            <Plug className="h-4 w-4 shrink-0 text-muted" />
-          </button>
+          />
         ) : (
           <div className="text-[15px] text-body">Connecting to {ports[0]!.name}…</div>
         ))}
@@ -74,17 +62,13 @@ export function NativeSerialPicker() {
           <p className="mb-2 text-[13px] text-body">Click a port to connect.</p>
           <div className="flex flex-col gap-2">
             {ports.map((p) => (
-              <button
+              <DeviceRow
                 key={p.name}
+                title={p.name}
+                subtitle={p.product || p.kind}
+                icon={<Plug className="h-4 w-4" />}
                 onClick={() => connectSerialPort(p.name)}
-                className="flex items-center justify-between rounded-[8px] border border-border bg-background px-4 py-3 text-left transition hover:border-primary"
-              >
-                <div>
-                  <div className="text-[15px] font-semibold text-foreground">{p.name}</div>
-                  <div className="text-[12px] text-muted">{p.product || p.kind}</div>
-                </div>
-                <Plug className="h-4 w-4 shrink-0 text-muted" />
-              </button>
+              />
             ))}
           </div>
         </>

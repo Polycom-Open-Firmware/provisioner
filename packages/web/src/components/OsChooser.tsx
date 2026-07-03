@@ -6,9 +6,9 @@
 // another swaps the artifact source (Continue advances). Rendered on Setup /
 // Choose-OS screens.
 import * as React from "react";
-import { RefreshCw } from "lucide-react";
 import { useWizard } from "@/lib/wizard";
 import { Select } from "@/components/ui/select";
+import { PickerHeader } from "@/components/PickerHeader";
 import { listOsBuilds, type OsBuild } from "@/os-catalog";
 
 function optionLabel(b: OsBuild): string {
@@ -45,17 +45,7 @@ export function OsChooser() {
 
   return (
     <div className="mt-6">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-          OS build
-        </div>
-        <button
-          onClick={() => refresh(true)}
-          className="flex items-center gap-1 font-mono text-[11px] text-muted hover:text-foreground"
-        >
-          <RefreshCw className="h-3 w-3" /> refresh
-        </button>
-      </div>
+      <PickerHeader label="OS build" onRefresh={() => refresh(true)} />
 
       {err && <div className="text-[13px] text-body">Couldn't load builds: {err}</div>}
       {!err && builds === null && <div className="text-[13px] text-muted">Loading builds…</div>}
