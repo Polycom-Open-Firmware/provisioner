@@ -24,10 +24,10 @@ use nusb::MaybeFuture;
 
 pub const SDP_VID: u16 = 0x1fc9;
 pub const SDP_PID_BOOTROM: u16 = 0x0134; // i.MX8MM BootROM in SDP mode
-// HW-VERIFY: the SPL's SDPV re-enumeration PID. The handoff reports our U-Boot
-// fastboot gadget is 1fc9:0152; the SPL's SDPV stage PID must be confirmed against
-// a real C60 (it may differ from the final u-boot gadget).
-pub const SDP_PID_SPL_SDPV: u16 = 0x0152;
+// The SPL's SDPV re-enumeration PID — CONFIRMED on a real C60 via the WebHID PoC:
+// the SPL "USB download gadget" is 1fc9:0151 (distinct from the final U-Boot
+// fastboot gadget at 1fc9:0152).
+pub const SDP_PID_SPL_SDPV: u16 = 0x0151;
 
 const CMD_RD_MEM: u16 = 0x0101;
 #[allow(dead_code)]

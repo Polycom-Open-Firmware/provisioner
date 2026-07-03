@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>C60 WebHID SDP — proof of concept</title>
+<style>
+  :root { --o:#e8590c; --bg:#0f1115; --card:#171a21; --line:#262b36; --muted:#8a93a6; --ok:#3fb950; --warn:#e3b341; --err:#f85149; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 ui-sans-serif,system-ui,sans-serif; background:var(--bg); color:#e6e9ef; }
+  .wrap { max-width:900px; margin:0 auto; padding:28px 20px 60px; }
+  h1 { font-size:22px; margin:0 0 2px; letter-spacing:-.02em; }
+  h1 span { color:var(--o); }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:14px 0; }
+  .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--o); margin:0 0 10px; }
+  button { background:var(--o); color:#fff; border:0; border-radius:8px; padding:9px 16px; font-weight:600; cursor:pointer; font-size:14px; }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  button.ghost { background:transparent; border:1px solid var(--line); color:#e6e9ef; }
+  input[type=file] { color:var(--muted); }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .grid { display:grid; grid-template-columns:auto 1fr; gap:2px 14px; font-family:ui-monospace,monospace; font-size:12.5px; }
+  .grid b { color:var(--muted); font-weight:400; }
+  #log { background:#0b0d11; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-family:ui-monospace,monospace; font-size:12px; height:280px; overflow:auto; white-space:pre-wrap; }
+  .l-ok{color:var(--ok)} .l-warn{color:var(--warn)} .l-err{color:var(--err)} .l-dim{color:var(--muted)} .l-tx{color:#79c0ff}
+  .pill { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
+  .unsupported { border-color:var(--err); }
+  code { color:var(--o); }
+  .note { color:var(--muted); font-size:12.5px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Polycom C60 · <span>WebHID SDP</span> proof of concept</h1>
+  <p class="sub">Drive the i.MX8MM BootROM serial-download protocol (SDP) from the browser over WebHID — no <code>uuu</code>, no driver install. Load <code>flash.bin</code> into RAM in two stages, exactly like <code>uuu -b spl</code>.</p>
+
+  <div class="card" id="supCard">
+    <h2>Environment</h2>
+    <div id="sup"></div>
+  </div>
+
+  <div class="card">
+    <h2>0 · flash.bin</h2>
+    <div class="row">
+      <input type="file" id="file" accept=".bin,application/octet-stream" />
+      <span class="pill" id="fsize">no file</span>
+    </div>
+    <div class="grid" id="parse" style="margin-top:12px"></div>
+    <p class="note">Pick the C60 build output (<code>polycom-uboot/out/c60-kepler_proto1/flash.bin</code>). The page parses the two boot containers (SPL + U-Boot) and shows the load addresses it will use.</p>
+  </div>
+
+  <div class="card">
+    <h2>1 · BootROM SDP — load &amp; run SPL <span class="pill">validated parse</span></h2>
+    <p class="note" style="margin-top:0">Put the C60 in recovery (both BOOT_MODE switches OFF), plug USB. Click to grant the <code>1fc9:0134</code> HID device, then it writes the SPL to OCRAM and jumps. <b>Success = the SPL brings up DDR and prints on the UART console.</b></p>
+    <div class="row"><button id="s1" disabled>Connect BootROM &amp; load SPL</button></div>
+  </div>
+
+  <div class="card">
+    <h2>2 · SPL SDPV — load U-Boot <span class="pill">experimental</span></h2>
+    <p class="note" style="margin-top:0">After the SPL re-enumerates it appears as a new HID device. Click to grant it, then the U-Boot container is written to DRAM and jumped. Stage-2 addressing is the HW-VERIFY part — watch the console.</p>
+    <div class="row"><button id="s2" class="ghost" disabled>Connect SPL &amp; load U-Boot</button></div>
+  </div>
+
+  <div class="card">
+    <h2>Log</h2>
+    <div class="row" style="margin-bottom:8px"><button class="ghost" id="clear">clear</button></div>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script>
+// ---- SDP protocol constants (mfgtools libuuu/sdp.h) ---------------------------
+const VID = 0x1fc9, PID_BOOTROM = 0x0134;
+const CMD_WR_FILE = 0x0404, CMD_JUMP = 0x0B0B;
+const ROM_WRITE_ACK = 0x128A8A12, ROM_STATUS_ACK = 0x88888888, ROM_OK_ACK = 0x900DD009;
+const IVT_B1 = 0x402000D1, IVT_B2 = 0x412000D1;
+const R_CMD = 1, R_DATA = 2, R_HAB = 3, R_STATUS = 4;
+let DATA_CHUNK = 1024; // imx output report 2 size; adjusted from the descriptor if present
+
+// ---- tiny logger --------------------------------------------------------------
+const logEl = document.getElementById('log');
+function log(msg, cls) {
+  const t = new Date().toLocaleTimeString();
+  const line = document.createElement('div');
+  if (cls) line.className = 'l-' + cls;
+  line.textContent = `${t}  ${msg}`;
+  logEl.appendChild(line); logEl.scrollTop = logEl.scrollHeight;
+}
+const hx = n => '0x' + (n >>> 0).toString(16).padStart(8, '0');
+document.getElementById('clear').onclick = () => logEl.textContent = '';
+
+// ---- environment check --------------------------------------------------------
+(function () {
+  const sup = document.getElementById('sup');
+  const hid = 'hid' in navigator;
+  const secure = window.isSecureContext;
+  sup.innerHTML =
+    `<div class="grid">` +
+    `<b>WebHID</b><span class="${hid ? 'l-ok' : 'l-err'}">${hid ? 'available' : 'NOT available — use Chrome/Edge'}</span>` +
+    `<b>secure context</b><span class="${secure ? 'l-ok' : 'l-err'}">${secure ? 'yes' : 'NO — must be https or localhost'}</span>` +
+    `</div>`;
+  if (!hid || !secure) document.getElementById('supCard').classList.add('unsupported');
+})();
+
+// ---- flash.bin parsing (mirrors the validated node parse) ---------------------
+let flash = null;    // Uint8Array
+let stage1 = null, stage2 = null;
+
+function rd32(buf, o) { return (o >= 0 && o + 4 <= buf.length) ? new DataView(buf.buffer, buf.byteOffset).getUint32(o, true) : null; }
+function findIvt(buf, from, limit) {
+  const end = Math.min(from + limit, buf.length);
+  for (let o = from; o + 32 <= end; o += 4) {
+    const b = rd32(buf, o);
+    if (b === IVT_B1 || b === IVT_B2)
+      return { fileOff: o, entry: rd32(buf, o + 4), dcd: rd32(buf, o + 12), bootData: rd32(buf, o + 16), selfAddr: rd32(buf, o + 20) };
+  }
+  return null;
+}
+function bootData(buf, ivt) {
+  const foff = ivt.fileOff + (ivt.bootData - ivt.selfAddr);
+  if (foff < 0 || foff + 12 > buf.length) return null;
+  return { start: rd32(buf, foff), size: rd32(buf, foff + 4) };
+}
+
+document.getElementById('file').onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  flash = new Uint8Array(await f.arrayBuffer());
+  document.getElementById('fsize').textContent = `${f.name} · ${flash.length.toLocaleString()} B`;
+  try {
+    const spl = findIvt(flash, 0, 0x100000);
+    if (!spl) throw new Error('no SPL IVT (0x402000D1) at head of file');
+    const sbd = bootData(flash, spl);
+    if (!sbd) throw new Error('no SPL BootData');
+    const splLen = sbd.size - (spl.selfAddr - sbd.start);
+    stage1 = { addr: spl.selfAddr, off: spl.fileOff, len: splLen };
+
+    const rest = spl.fileOff + splLen;
+    const ub = findIvt(flash, rest, 0x100000);
+    if (ub) {
+      // The container's entry can sit BELOW its IVT (C60 U-Boot: entry 0x401fadc0,
+      // IVT self 0x401fbdc0). Load from the container base (entry) so the entry
+      // point is actually populated, with the IVT landing at entry+headroom; then
+      // jump to the IVT (self) — that's what the SPL's f_sdp reads to boot.
+      const head = ub.selfAddr - ub.entry;              // IVT offset within the image
+      const base = head > 0 ? ub.fileOff - head : ub.fileOff;
+      const addr = head > 0 ? ub.entry : ub.selfAddr;   // load address
+      stage2 = { addr, off: base, len: flash.length - base, jump: ub.selfAddr };
+    }
+
+    const g = document.getElementById('parse');
+    g.innerHTML =
+      `<b>SPL (stage 1)</b><span>write ${splLen.toLocaleString()} B @ file ${hx(spl.fileOff)} → load ${hx(spl.selfAddr)}</span>` +
+      (ub ? `<b>U-Boot (stage 2)</b><span>write ${stage2.len.toLocaleString()} B @ file ${hx(stage2.off)} → load ${hx(stage2.addr)} (jump ${hx(stage2.jump)})</span>`
+          : `<b>U-Boot (stage 2)</b><span class="l-warn">second IVT not found — stage 2 disabled</span>`);
+    log(`parsed flash.bin: SPL ${splLen} B → ${hx(spl.selfAddr)}` + (ub ? `, U-Boot ${stage2.len} B → ${hx(ub.selfAddr)}` : ''), 'ok');
+    document.getElementById('s1').disabled = false;
+  } catch (err) {
+    log('parse failed: ' + err.message, 'err');
+    document.getElementById('parse').innerHTML = `<b>error</b><span class="l-err">${err.message}</span>`;
+  }
+};
+
+// ---- WebHID SDP transport -----------------------------------------------------
+function attachInbox(device) {
+  const inbox = [];       // {reportId, data:DataView}
+  const waiters = [];     // {id, resolve, timer}
+  function drain() {
+    for (let i = inbox.length - 1; i >= 0; i--) {
+      const wi = waiters.findIndex(w => w.id === inbox[i].reportId);
+      if (wi >= 0) { const w = waiters.splice(wi, 1)[0]; clearTimeout(w.timer); w.resolve(inbox.splice(i, 1)[0].data); }
+    }
+  }
+  device.addEventListener('inputreport', (e) => { inbox.push({ reportId: e.reportId, data: e.data }); drain(); });
+  return function readReport(id, timeoutMs) {
+    const idx = inbox.findIndex(r => r.reportId === id);
+    if (idx >= 0) return Promise.resolve(inbox.splice(idx, 1)[0].data);
+    return new Promise((resolve, reject) => {
+      const w = { id, resolve };
+      w.timer = setTimeout(() => { const k = waiters.indexOf(w); if (k >= 0) waiters.splice(k, 1); reject(new Error('timeout waiting for report ' + id)); }, timeoutMs);
+      waiters.push(w);
+    });
+  };
+}
+function encodeCmd(cmd, addr, count) {
+  const b = new Uint8Array(16), dv = new DataView(b.buffer);
+  dv.setUint16(0, cmd, false);   // big-endian, per libuuu EndianSwap
+  dv.setUint32(2, addr, false);
+  b[6] = 0;                      // format
+  dv.setUint32(7, count, false);
+  dv.setUint32(11, 0, false);    // data
+  b[15] = 0;                     // rsvd
+  return b;
+}
+async function sendData(device, bytes) {
+  for (let i = 0; i < bytes.length; i += DATA_CHUNK) {
+    let chunk = bytes.subarray(i, i + DATA_CHUNK);
+    if (chunk.length < DATA_CHUNK) { const p = new Uint8Array(DATA_CHUNK); p.set(chunk); chunk = p; }
+    await device.sendReport(R_DATA, chunk);
+  }
+}
+async function writeFile(device, read, addr, bytes) {
+  log(`WRITE_FILE ${bytes.length.toLocaleString()} B → ${hx(addr)}`, 'tx');
+  await device.sendReport(R_CMD, encodeCmd(CMD_WR_FILE, addr, bytes.length));
+  // This silicon sends no HAB report (report 3) before the data on WRITE_FILE —
+  // stream immediately (the inbox still captures report 3 if it ever arrives).
+  await sendData(device, bytes);
+  const st = await read(R_STATUS, 20000);
+  const ack = st.getUint32(0, true);
+  const ok = ack === ROM_WRITE_ACK || ack === ROM_STATUS_ACK || ack === ROM_OK_ACK;
+  log('  status: ' + hx(ack) + (ok ? ' (ack)' : ' (unexpected — noting for HW-VERIFY)'), ok ? 'ok' : 'warn');
+}
+async function jump(device, read, addr) {
+  log(`JUMP → ${hx(addr)}`, 'tx');
+  await device.sendReport(R_CMD, encodeCmd(CMD_JUMP, addr, 0));
+  try { const hab = await read(R_HAB, 3000); log('  HAB report: ' + hx(hab.getUint32(0, true)), 'dim'); }
+  catch { log('  (device jumped; no report — expected)', 'dim'); }
+}
+function dumpReports(device) {
+  for (const c of device.collections || []) {
+    const o = (c.outputReports || []).map(r => r.reportId).join(',');
+    const inp = (c.inputReports || []).map(r => r.reportId).join(',');
+    log(`  HID collection usagePage=${hx(c.usagePage)} usage=${c.usage} out=[${o}] in=[${inp}]`, 'dim');
+    // adjust DATA_CHUNK to the declared size of output report 2 if we can read it
+    const dr = (c.outputReports || []).find(r => r.reportId === R_DATA);
+    if (dr) {
+      const bits = (dr.items || []).reduce((a, it) => a + (it.reportSize || 0) * (it.reportCount || 0), 0);
+      if (bits) { DATA_CHUNK = Math.max(1, bits >> 3); log(`  data report size = ${DATA_CHUNK} B`, 'dim'); }
+    }
+  }
+}
+async function openDevice(filters, label) {
+  const chosen = await navigator.hid.requestDevice({ filters });
+  if (!chosen.length) throw new Error('no device selected');
+  const device = chosen[0];
+  log(`selected ${label}: ${hx(device.vendorId)}:${hx(device.productId)} "${device.productName}"`, 'ok');
+  if (!device.opened) await device.open();
+  dumpReports(device);
+  return device;
+}
+
+// ---- stage buttons ------------------------------------------------------------
+document.getElementById('s1').onclick = async () => {
+  if (!flash || !stage1) return log('load a flash.bin first', 'warn');
+  const btn = document.getElementById('s1'); btn.disabled = true;
+  try {
+    const dev = await openDevice([{ vendorId: VID, productId: PID_BOOTROM }], 'BootROM');
+    const read = attachInbox(dev);
+    log('--- stage 1: SPL ---', 'ok');
+    await writeFile(dev, read, stage1.addr, flash.subarray(stage1.off, stage1.off + stage1.len));
+    await jump(dev, read, stage1.addr);
+    log('SPL loaded + jumped. Watch the UART console for the DDR/SPL banner. If it prints — WebHID SDP works. ✔', 'ok');
+    document.getElementById('s2').disabled = false;
+  } catch (e) { log('stage 1 failed: ' + e.message, 'err'); }
+  finally { btn.disabled = false; }
+};
+document.getElementById('s2').onclick = async () => {
+  if (!flash || !stage2) return log('no stage-2 container parsed', 'warn');
+  const btn = document.getElementById('s2'); btn.disabled = true;
+  try {
+    // The SPL re-enumerates under 1fc9 (PID is HW-VERIFY) — grant whatever appears.
+    const dev = await openDevice([{ vendorId: VID }], 'SPL/SDPV');
+    const read = attachInbox(dev);
+    log('--- stage 2: U-Boot ---', 'ok');
+    await writeFile(dev, read, stage2.addr, flash.subarray(stage2.off, stage2.off + stage2.len));
+    await jump(dev, read, stage2.jump);
+    log('U-Boot loaded + jumped. Watch the console for the U-Boot banner.', 'ok');
+  } catch (e) { log('stage 2 failed: ' + e.message, 'err'); }
+  finally { btn.disabled = false; }
+};
+</script>
+</body>
+</html>
