@@ -44,8 +44,17 @@ export interface ConfirmStep extends StepBase {
 
 export interface ActionStep extends StepBase {
   type: "action";
-  /** Auto-runs on entry; streams to the console; drives the progress bar. */
+  /** Streams to the console; drives the progress bar. Auto-runs on entry UNLESS
+   *  `gesture` is set, in which case it waits for its start button (which performs
+   *  the device pick, then runs — merging the old connect-step + action pair). */
   run: (ctx: FlowContext) => Promise<void>;
+  /** If set, don't auto-run: show a start button that does this gesture (the device
+   *  pick, which must originate from a user click) and then runs. */
+  gesture?: Gesture;
+  /** Start-button label for a gesture action (e.g. "Connect & flash"). */
+  confirmLabel?: string;
+  /** HID device filters for a `connect-hid` gesture action. */
+  hidFilters?: HidFilter[];
 }
 
 export interface DoneStep extends StepBase {

@@ -10,7 +10,7 @@ import { listOsBuilds, type OsBuild } from "@/os-catalog";
 import { Badge } from "@/components/ui/badge";
 
 export function OsChooser() {
-  const { chooseOs } = useWizard();
+  const { selectOs, selectedOs } = useWizard();
   const [builds, setBuilds] = React.useState<OsBuild[] | null>(null);
   const [err, setErr] = React.useState<string | null>(null);
 
@@ -51,8 +51,10 @@ export function OsChooser() {
         {builds?.map((b) => (
           <button
             key={b.tag}
-            onClick={() => chooseOs(b)}
-            className="flex items-center justify-between rounded-[8px] border border-border bg-background px-4 py-3 text-left transition hover:border-primary"
+            onClick={() => selectOs(b)}
+            className={`flex items-center justify-between rounded-[8px] border bg-background px-4 py-3 text-left transition hover:border-primary ${
+              selectedOs?.tag === b.tag ? "border-primary ring-1 ring-primary" : "border-border"
+            }`}
           >
             <div>
               <div className="flex items-center gap-2">

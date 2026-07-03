@@ -7,7 +7,7 @@
 // geometry, re-expressed as wizard steps that share a per-flow `state` object.
 import { sleep } from "../transport/transport";
 import type { Flow, FlowContext } from "../engine/types";
-import { osInstallSteps, chooseOsStep } from "./reinstall-linux";
+import { osInstallSteps, setupStep } from "./reinstall-linux";
 
 // --- geometry (option-A layout, identical to tc8_enroll.py / enroll.js) -------
 const BOOTB_LBA = 0x20000; // boot_b start (disposable transfer slot, user area)
@@ -121,27 +121,7 @@ export function unlockFlow(): Flow {
     title: "Unlock and Install",
     summary: "Unlock a fresh device and install Linux — one-time, needs serial.",
     steps: [
-      {
-        id: "intro",
-        type: "info",
-        rail: "Overview",
-        title: "Unlock this device",
-        body:
-          "A one-time setup that installs the open bootloader and then Linux, so the " +
-          "device is ready to use. You'll need the serial adapter and a USB cable.",
-      },
-      chooseOsStep(),
-      {
-        id: "settings",
-        type: "confirm",
-        rail: "Settings",
-        title: "Choose what to apply",
-        body:
-          "Set the values you want this device to start with. Anything you leave blank is left " +
-          "at its default. These are written during install and applied on first boot. When " +
-          "you're ready, press Continue.",
-        confirmLabel: "Continue",
-      },
+      setupStep(),
       {
         id: "disassembly",
         type: "info",
@@ -160,22 +140,15 @@ export function unlockFlow(): Flow {
         ],
       },
       {
-        id: "connect-serial",
-        type: "confirm",
-        rail: "Connect serial",
-        title: "Connect the serial adapter",
-        body:
-          "Wire up the serial adapter as shown, with the device powered off, then press " +
-          "Continue and choose the port.",
-        confirmLabel: "Continue",
-        gesture: "connect-serial",
-      },
-      {
         id: "prep",
         type: "action",
-        rail: "Prepare device",
-        title: "Catching the bootloader",
-        body: "Power-cycle the device now so we can interrupt its boot countdown.",
+        rail: "Connect serial",
+        title: "Connect serial & prepare the device",
+        body:
+          "Wire up the serial adapter as shown, with the device powered off. Press the button and " +
+          "choose the serial port, then power-cycle the device so we can interrupt its boot countdown.",
+        gesture: "connect-serial",
+        confirmLabel: "Connect & prepare",
         run: async (ctx) => {
           await ctx.connectSerial(115200);
           if (!(await ctx.uboot.catchPrompt(ctx.log)))
@@ -203,23 +176,15 @@ export function unlockFlow(): Flow {
         },
       },
       {
-        id: "connect-usb",
-        type: "confirm",
-        rail: "Connect USB",
-        title: "Connect over USB",
-        body:
-          "The device is now in programming mode, ready to receive the new unlocked " +
-          "bootloader. Connect it to this computer over USB, then press Continue and " +
-          "choose it from the list.",
-        confirmLabel: "Continue",
-        gesture: "connect-usb",
-      },
-      {
         id: "flash-stage2",
         type: "action",
-        rail: "Flash bootloader",
-        title: "Installing the bootloader",
-        body: "Transferring the second-stage bootloader to the device.",
+        rail: "Install bootloader",
+        title: "Install the open bootloader",
+        body:
+          "The device is now in programming mode. Connect it over USB and choose it from the list " +
+          "to transfer the open bootloader.",
+        gesture: "connect-usb",
+        confirmLabel: "Connect & install",
         run: async (ctx) => {
           await ctx.connectUsb();
           const bytes = await fetchStage2(ctx);
@@ -234,11 +199,11 @@ export function unlockFlow(): Flow {
         },
       },
       {
-        id: "relocate",
+        id: "finalize",
         type: "action",
         rail: "Finalize bootloader",
-        title: "Finalizing",
-        body: "Moving the bootloader into protected storage and enabling chainload.",
+        title: "Finalizing the bootloader",
+        body: "Moving the bootloader into protected storage, then rebooting into programming mode.",
         run: async (ctx) => {
           // exit fastboot back to the prompt (Ctrl-C over serial)
           ctx.log("exiting fastboot (Ctrl-C over serial)");
@@ -269,17 +234,7 @@ export function unlockFlow(): Flow {
           await ctx.uboot.cmd("setenv bootcmd '" + buildBootcmd(dev) + "'");
           await ctx.uboot.cmd("saveenv");
           ctx.log("bootloader installed + chainload persisted.");
-        },
-      },
-      {
-        id: "trap",
-        type: "action",
-        rail: "Reboot to fastboot",
-        title: "Catching it before it reboots",
-        body:
-          "Putting the device into programming mode again with the new bootloader, to " +
-          "prepare it for the OS install.",
-        run: async (ctx) => {
+
           // Reboot. Stock stage-1 chainloads stage-2 — we must LET that happen, then
           // interrupt stage-2's 3 s autoboot before it runs `boota`: on a stock unit
           // boota would boot the leftover Android straight into a scary recovery

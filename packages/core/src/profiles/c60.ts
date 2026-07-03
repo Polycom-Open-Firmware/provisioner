@@ -16,7 +16,7 @@
 import type { UsbFilter } from "../transport/transport";
 import type { Device, Flow, FlowContext } from "../engine/types";
 import { SDP_PID_BOOTROM, SDP_PID_SPL, SDP_VID } from "../protocol/sdp";
-import { reinstallLinuxFlow, osInstallSteps, chooseOsStep } from "../flow/reinstall-linux";
+import { reinstallLinuxFlow, osInstallSteps, setupStep } from "../flow/reinstall-linux";
 import { configureFlow } from "../flow/configure";
 
 /** The C60 U-Boot fastboot gadget (post-boot), for the Install/Configure choosers. */
@@ -48,54 +48,19 @@ export function c60UnlockFlow(): Flow {
     title: "Unlock and Install",
     summary: "Load the open bootloader over USB recovery and install Linux — all in the browser.",
     steps: [
-      {
-        id: "intro",
-        type: "info",
-        rail: "Overview",
-        title: "Unlock this device",
-        body:
-          "A one-time setup that loads the open bootloader over the device's USB recovery mode, " +
-          "then installs Linux. It runs entirely in this browser — no app or driver to install. " +
-          "Use Chrome or Edge.",
-      },
-      chooseOsStep(),
-      {
-        id: "settings",
-        type: "confirm",
-        rail: "Settings",
-        title: "Choose what to apply",
-        body:
-          "Set the values you want this device to start with. Anything you leave blank is left at " +
-          "its default; they're written during install and applied on first boot. Press Continue.",
-        confirmLabel: "Continue",
-      },
-      {
-        id: "recovery",
-        type: "info",
-        rail: "Enter recovery",
-        title: "Put the device into recovery mode",
-        body:
-          "Set both BOOT_MODE switches to OFF so the chip enters USB serial-download mode, then " +
-          "connect the USB cable. Press Next when it's connected.",
-      },
-      {
-        id: "connect-bootrom",
-        type: "confirm",
-        rail: "Connect recovery",
-        title: "Connect the recovery device",
-        body:
-          "Press Continue and choose the recovery device from the list (it appears as a vendor " +
-          "HID device).",
-        confirmLabel: "Continue",
-        gesture: "connect-hid",
-        hidFilters: [{ vendorId: SDP_VID, productId: SDP_PID_BOOTROM }],
-      },
+      setupStep(),
       {
         id: "load-spl",
         type: "action",
-        rail: "Load bootloader",
-        title: "Loading the bootloader",
-        body: "Loading the first stage and bringing up memory. The device will re-appear as a new device.",
+        rail: "Enter recovery",
+        title: "Connect in recovery mode",
+        body:
+          "Set both BOOT_MODE switches to OFF so the chip enters USB recovery, and connect the USB " +
+          "cable. Press the button and choose the recovery device (a vendor HID device) to load the " +
+          "first stage.",
+        gesture: "connect-hid",
+        confirmLabel: "Connect & load",
+        hidFilters: [{ vendorId: SDP_VID, productId: SDP_PID_BOOTROM }],
         run: async (ctx) => {
           await ctx.connectHid();
           const bin = await getFlash(ctx, flash);
@@ -103,23 +68,16 @@ export function c60UnlockFlow(): Flow {
         },
       },
       {
-        id: "connect-spl",
-        type: "confirm",
-        rail: "Reconnect",
-        title: "Connect the download device",
-        body:
-          "The first stage is up and the device re-appeared. Press Continue and choose it from the " +
-          "list again (it shows as a USB download gadget).",
-        confirmLabel: "Continue",
-        gesture: "connect-hid",
-        hidFilters: [{ vendorId: SDP_VID, productId: SDP_PID_SPL }],
-      },
-      {
         id: "load-uboot",
         type: "action",
-        rail: "Boot U-Boot",
-        title: "Starting the open bootloader",
-        body: "Loading and starting the open bootloader. The device will boot into programming mode.",
+        rail: "Start bootloader",
+        title: "Reconnect & start the bootloader",
+        body:
+          "The first stage brought up memory and the device re-appeared as a download gadget. Press " +
+          "the button and choose it again to load and start the open bootloader.",
+        gesture: "connect-hid",
+        confirmLabel: "Connect & start",
+        hidFilters: [{ vendorId: SDP_VID, productId: SDP_PID_SPL }],
         run: async (ctx) => {
           await ctx.connectHid();
           const bin = await getFlash(ctx, flash);
@@ -129,7 +87,7 @@ export function c60UnlockFlow(): Flow {
       ...osInstallSteps(
         "os",
         "The open bootloader is starting and the device will enter programming mode. When it does, " +
-          "connect it over USB, then press Continue and choose it from the list.",
+          "connect it over USB and choose it from the list to install Linux.",
       ),
     ],
   };

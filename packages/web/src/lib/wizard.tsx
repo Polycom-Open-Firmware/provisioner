@@ -40,6 +40,10 @@ interface WizardState {
   running: boolean;
   busy: boolean;
   error: string | null;
+  /** A gesture-action is waiting for its "Connect & …" start button. */
+  awaitingStart: boolean;
+  /** The OS build picked on the Setup/Choose-OS screen (for highlighting). */
+  selectedOs: OsBuild | null;
 }
 
 export interface WizardApi extends WizardState {
@@ -57,8 +61,9 @@ export interface WizardApi extends WizardState {
   connectSerialPort: (path: string) => Promise<void>;
   /** Native only: open a specific USB device, then advance. */
   connectUsbDevice: (dev: { vendorId: number; productId: number; serial?: string }) => Promise<void>;
-  /** Pick which OS build to flash; swaps the artifact source, then advances. */
-  chooseOs: (build: OsBuild) => void;
+  /** Pick which OS build to flash; swaps the artifact source (does NOT advance —
+   *  the Setup screen's Continue button does). */
+  selectOs: (build: OsBuild) => void;
 }
 
 const initial: WizardState = {
@@ -71,16 +76,20 @@ const initial: WizardState = {
   running: false,
   busy: false,
   error: null,
+  awaitingStart: false,
+  selectedOs: null,
 };
 
 function reduce(s: WizardState, e: EngineEvent): WizardState {
   switch (e.type) {
     case "flow:start":
-      return { ...s, stepIndex: 0, progress: null, error: null };
+      return { ...s, stepIndex: 0, progress: null, error: null, awaitingStart: false };
     case "step:enter":
-      return { ...s, stepIndex: e.index, progress: null };
+      return { ...s, stepIndex: e.index, progress: null, awaitingStart: false };
+    case "action:await":
+      return { ...s, awaitingStart: true };
     case "action:start":
-      return { ...s, error: null };
+      return { ...s, error: null, awaitingStart: false };
     case "running":
       return { ...s, running: e.running };
     case "console":
@@ -135,11 +144,19 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
 
   const retry = () => runner.retry();
 
+  // After attaching a device (native picker), either start the current gesture
+  // action, or advance a confirm step (legacy).
+  const afterAttach = () => {
+    const step = stateRef.current.flow?.steps[stateRef.current.stepIndex];
+    if (step?.type === "action") runner.runCurrentAction();
+    else runner.confirm();
+  };
+
   const connectSerialPort = async (path: string) => {
     setState((x) => ({ ...x, busy: true, error: null }));
     try {
       await runner.attachSerial(115200, path);
-      runner.confirm();
+      afterAttach();
     } catch (err) {
       setState((x) => ({ ...x, error: (err as Error).message }));
     } finally {
@@ -151,7 +168,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setState((x) => ({ ...x, busy: true, error: null }));
     try {
       await runner.attachUsb([{ vendorId: dev.vendorId, productId: dev.productId }], dev.serial);
-      runner.confirm();
+      afterAttach();
     } catch (err) {
       setState((x) => ({ ...x, error: (err as Error).message }));
     } finally {
@@ -159,9 +176,9 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const chooseOs = (build: OsBuild) => {
+  const selectOs = (build: OsBuild) => {
     runner.useArtifacts(artifactsFor(build));
-    runner.confirm();
+    setState((x) => ({ ...x, selectedOs: build }));
   };
 
   const restart = () => setState({ ...initial });
@@ -185,17 +202,17 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
 
     if (step.type === "info") return runner.next();
     if (step.type === "done") return restart();
-    if (step.type === "action") return; // auto-runs; no primary action
 
-    // confirm
-    const gesture = step.gesture;
-    if (gesture === "connect-usb" || gesture === "connect-serial" || gesture === "connect-hid") {
+    // A gesture action: its "Connect & …" button does the device pick (in this
+    // user gesture) then starts the run. A plain action has no primary button.
+    if (step.type === "action") {
+      if (!step.gesture) return;
       setState((x) => ({ ...x, busy: true, error: null }));
       try {
-        if (gesture === "connect-usb") await runner.attachUsb(s.device?.filters);
-        else if (gesture === "connect-serial") await runner.attachSerial();
+        if (step.gesture === "connect-usb") await runner.attachUsb(s.device?.filters);
+        else if (step.gesture === "connect-serial") await runner.attachSerial();
         else await runner.attachHid(step.hidFilters ?? [{ vendorId: 0x1fc9 }]);
-        runner.confirm();
+        runner.runCurrentAction();
       } catch (err) {
         setState((x) => ({ ...x, error: (err as Error).message }));
       } finally {
@@ -203,6 +220,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
       }
       return;
     }
+
+    // confirm — advances (Setup/Settings/Choose-OS). No gestures live here anymore.
     runner.confirm();
   };
 
@@ -221,7 +240,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     restart,
     connectSerialPort,
     connectUsbDevice,
-    chooseOs,
+    selectOs,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

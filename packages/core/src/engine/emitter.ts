@@ -8,6 +8,7 @@
 export type EngineEvent =
   | { type: "flow:start"; flowId: string; steps: number }
   | { type: "step:enter"; index: number; stepId: string }
+  | { type: "action:await"; index: number } // gesture-action waiting for its start button
   | { type: "action:start"; index: number }
   | { type: "action:done"; index: number }
   | { type: "running"; running: boolean } // drives the console's live dot

@@ -110,22 +110,15 @@ async function runFlash(ctx: FlowContext): Promise<void> {
 export function osInstallSteps(idPrefix = "os", connectBody?: string): Step[] {
   return [
     {
-      id: `${idPrefix}-connect-usb`,
-      type: "confirm",
-      rail: "Connect USB",
-      title: "Connect over USB",
-      body:
-        connectBody ??
-        "Connect the device to this computer over USB, then press Continue and choose it from the list.",
-      confirmLabel: "Continue",
-      gesture: "connect-usb",
-    },
-    {
       id: `${idPrefix}-flash`,
       type: "action",
       rail: "Install Linux",
-      title: "Installing Debian",
-      body: "Flashing the boot images and the root filesystem. This takes a few minutes.",
+      title: "Install Linux",
+      body:
+        connectBody ??
+        "Connect the device over USB and choose it from the list to begin. This takes a few minutes.",
+      gesture: "connect-usb",
+      confirmLabel: "Connect & install",
       run: runFlash,
     },
     {
@@ -138,7 +131,7 @@ export function osInstallSteps(idPrefix = "os", connectBody?: string): Step[] {
   ];
 }
 
-/** OS-build chooser — the UI renders the catalog for the step with id "choose-os". */
+/** OS-build chooser (OS only) — the UI renders the catalog for step id "choose-os". */
 export function chooseOsStep(): Step {
   return {
     id: "choose-os",
@@ -146,6 +139,23 @@ export function chooseOsStep(): Step {
     rail: "Choose OS",
     title: "Choose an OS",
     body: "Pick which OS build to install. The newest releases are listed first.",
+    confirmLabel: "Continue",
+  };
+}
+
+/** Combined Setup step (OS build + settings) — the UI renders both the catalog and
+ *  the config form for step id "setup". Replaces the old separate choose-OS +
+ *  settings screens on flows that install AND configure. */
+export function setupStep(): Step {
+  return {
+    id: "setup",
+    type: "confirm",
+    rail: "Setup",
+    title: "Set up this device",
+    body:
+      "Pick the OS build to install, and set any values you want applied on first boot — " +
+      "anything left blank keeps its default.",
+    confirmLabel: "Continue",
   };
 }
 
@@ -155,17 +165,12 @@ export function reinstallLinuxFlow(): Flow {
     title: "Install or Update OS",
     summary: "Flash a fresh Debian image onto an already-unlocked device.",
     steps: [
-      {
-        id: "intro",
-        type: "info",
-        rail: "Enter fastboot",
-        title: "Put the device into fastboot",
-        body:
-          "This installs or updates Linux on a device that's already unlocked. When you see " +
-          "the submarine logo, touch the screen with four fingers to enter fastboot, then press Next.",
-      },
       chooseOsStep(),
-      ...osInstallSteps("os"),
+      ...osInstallSteps(
+        "os",
+        "When you see the submarine logo, touch the screen with four fingers to enter fastboot. " +
+          "Then connect the device over USB and choose it from the list to begin.",
+      ),
     ],
   };
 }

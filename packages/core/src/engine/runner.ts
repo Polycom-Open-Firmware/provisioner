@@ -73,10 +73,11 @@ export class WizardRunner {
     void this.enter(this.index - 1);
   }
 
-  /** Re-run the current action step — recover from a failed action (e.g. a missed trap). */
+  /** Re-run the current action step — recover from a failed action (e.g. a missed
+   *  trap). The device is already attached, so re-run directly (don't re-await). */
   retry(): void {
     const step = this.currentStep;
-    if (step && step.type === "action") void this.enter(this.index);
+    if (step && step.type === "action") void this.runAction(this.index);
   }
 
   /** Swap the artifact source (the OS chooser picks which OS build to flash). */
@@ -127,9 +128,11 @@ export class WizardRunner {
       this.serialReady = defer<void>();
       return this.serialReady.promise;
     };
-    // Unlike USB/serial, each SDP stage opens a DIFFERENT HID device (BootROM then
-    // the SPL gadget), so connectHid always waits for the fresh gesture's attach.
+    // With the merged connect+action step, the HID device is attached BEFORE the
+    // action runs, so connectHid short-circuits when already open (each SDP stage
+    // re-attaches to a different device first).
     const connectHid = () => {
+      if (this.sdp.connected) return Promise.resolve();
       this.hidReady = defer<void>();
       return this.hidReady.promise;
     };
@@ -158,17 +161,35 @@ export class WizardRunner {
     this.events.emit({ type: "step:enter", index, stepId: step.id });
 
     if (step.type !== "action") return;
+    // A gesture action waits for its start button (which does the device pick, then
+    // calls runCurrentAction). A plain action auto-runs on entry.
+    if (step.gesture) {
+      this.events.emit({ type: "action:await", index });
+      return;
+    }
+    void this.runAction(index);
+  }
 
+  /** Run the action at `index`: stream, drive progress, auto-advance on success. */
+  private async runAction(index: number): Promise<void> {
+    const step = this.flow?.steps[index];
+    if (!step || step.type !== "action") return;
     this.events.emit({ type: "action:start", index });
     this.events.emit({ type: "running", running: true });
     try {
       await step.run(this.context());
       this.events.emit({ type: "action:done", index });
       this.events.emit({ type: "running", running: false });
-      void this.enter(index + 1); // action steps auto-advance on success
+      void this.enter(index + 1);
     } catch (e) {
       this.events.emit({ type: "running", running: false });
       this.events.emit({ type: "error", index, message: (e as Error).message });
     }
+  }
+
+  /** Start the current gesture-action AFTER its device has been attached (the UI
+   *  does the attach in the click handler, then calls this). */
+  runCurrentAction(): void {
+    void this.runAction(this.index);
   }
 }

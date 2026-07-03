@@ -72,41 +72,25 @@ export function configureFlow(): Flow {
     summary: "Push settings to an already-installed device.",
     steps: [
       {
-        id: "intro",
-        type: "info",
-        rail: "Overview",
-        title: "Configure this device",
-        body:
-          "Push settings — name, kiosk URL, time zone, access — to a device that's already " +
-          "running Linux. The device applies them on its next boot. Takes about a minute.",
-      },
-      {
         id: "settings",
         type: "confirm",
         rail: "Settings",
         title: "Choose what to apply",
         body:
-          "Set the values you want to change. Anything you leave blank is kept as-is on the " +
-          "device. When you're ready, press Continue.",
+          "Push settings to a device already running Linux — set the values you want to change; " +
+          "anything left blank is kept as-is. The device applies them on its next boot.",
         confirmLabel: "Continue",
-      },
-      {
-        id: "connect-usb",
-        type: "confirm",
-        rail: "Connect USB",
-        title: "Put the device into fastboot, then connect",
-        body:
-          "When you see the submarine logo, touch the screen with four fingers to enter fastboot. " +
-          "Then connect the device to this computer over USB, press Continue, and choose it from the list.",
-        confirmLabel: "Continue",
-        gesture: "connect-usb",
       },
       {
         id: "apply",
         type: "action",
         rail: "Apply config",
-        title: "Applying configuration",
-        body: "Writing the configuration to the device and rebooting.",
+        title: "Apply configuration",
+        body:
+          "When you see the submarine logo, touch the screen with four fingers to enter fastboot. " +
+          "Then connect the device over USB and choose it from the list to apply the settings.",
+        gesture: "connect-usb",
+        confirmLabel: "Connect & apply",
         run: runApply,
       },
       {

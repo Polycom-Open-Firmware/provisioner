@@ -9,19 +9,18 @@ import { Button } from "@/components/ui/button";
 import { isTauri } from "@/native/backend";
 
 export function Footer() {
-  const { currentStep, stepIndex, flow, running, busy, error, primary, back, retry } = useWizard();
+  const { currentStep, stepIndex, flow, running, busy, error, awaitingStart, primary, back, retry } = useWizard();
   const step = currentStep;
   if (!step || !flow) return null;
 
   const isAction = step.type === "action";
+  const gesture = step.type === "confirm" || step.type === "action" ? step.gesture : undefined;
+  const confirmLabel = step.type === "confirm" || step.type === "action" ? step.confirmLabel : undefined;
   const actionErrored = isAction && !!error && !running && !busy;
-  // The OS chooser and the native USB/serial pickers advance themselves, so the
-  // footer button is hidden on those steps.
-  const hidePrimary =
-    step.id === "choose-os" ||
-    (isTauri() &&
-      step.type === "confirm" &&
-      (step.gesture === "connect-serial" || step.gesture === "connect-usb"));
+  // Hide the footer button for a running/auto action, or when a native picker (which
+  // selects + starts the step itself) handles a gesture step.
+  const nativePicker = isTauri() && (gesture === "connect-serial" || gesture === "connect-usb");
+  const hidePrimary = (isAction && !awaitingStart) || nativePicker;
   const prev = stepIndex > 0 ? flow.steps[stepIndex - 1] : null;
   const canBack =
     !running && !busy && !isAction && step.type !== "done" && (!prev || prev.type !== "action");
@@ -30,11 +29,13 @@ export function Footer() {
     step.type === "info"
       ? "Next"
       : step.type === "confirm"
-        ? step.confirmLabel ?? "Continue"
+        ? confirmLabel ?? "Continue"
         : step.type === "done"
           ? "Back to devices"
-          : "Working…";
-  const primaryDisabled = isAction || running || busy;
+          : awaitingStart
+            ? confirmLabel ?? "Connect & continue"
+            : "Working…";
+  const primaryDisabled = (isAction && !awaitingStart) || running || busy;
 
   return (
     <div className="flex shrink-0 items-center justify-between border-t border-border px-8 py-4">

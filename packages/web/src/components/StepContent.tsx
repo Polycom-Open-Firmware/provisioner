@@ -52,11 +52,15 @@ function GestureHint({ gesture }: { gesture: Gesture }) {
 }
 
 export function StepContent() {
-  const { currentStep, progress, running, error, lines } = useWizard();
+  const { currentStep, progress, running, error, lines, awaitingStart } = useWizard();
   const step = currentStep;
   if (!step) return null;
 
   const pct = progress && progress.total > 0 ? (progress.done / progress.total) * 100 : 0;
+  // A gesture action shows its connect UI (hint/picker) while awaiting the start
+  // button; once started it shows the progress bar instead.
+  const gesture = step.type === "confirm" || step.type === "action" ? step.gesture : undefined;
+  const showConnectUi = step.type === "confirm" || (step.type === "action" && awaitingStart);
 
   return (
     <div className="mx-auto max-w-2xl p-10">
@@ -73,21 +77,21 @@ export function StepContent() {
       <h1 className="mt-2 text-[27px] font-bold tracking-[-0.02em] text-foreground">{step.title}</h1>
       {step.body && <p className="mt-3 text-[15px] leading-relaxed text-body">{step.body}</p>}
 
-      {step.id === "settings" && <ConfigForm />}
+      {(step.id === "setup" || step.id === "choose-os") && <OsChooser />}
 
-      {step.id === "choose-os" && <OsChooser />}
+      {(step.id === "setup" || step.id === "settings") && <ConfigForm />}
 
       {step.gallery && step.gallery.length > 0 && (
         <Slideshow images={step.gallery} className="mt-6" />
       )}
 
-      {step.type === "confirm" && step.gesture && <GestureHint gesture={step.gesture} />}
+      {showConnectUi && gesture && <GestureHint gesture={gesture} />}
 
-      {step.type === "confirm" && step.gesture === "connect-serial" && isTauri() && <NativeSerialPicker />}
+      {showConnectUi && gesture === "connect-serial" && isTauri() && <NativeSerialPicker />}
 
-      {step.type === "confirm" && step.gesture === "connect-usb" && isTauri() && <NativeUsbPicker />}
+      {showConnectUi && gesture === "connect-usb" && isTauri() && <NativeUsbPicker />}
 
-      {step.type === "action" && (
+      {step.type === "action" && !awaitingStart && (
         <div className="mt-8">
           <div className="mb-2 flex items-center justify-between text-sm">
             <span className="flex items-center gap-2 text-body">
