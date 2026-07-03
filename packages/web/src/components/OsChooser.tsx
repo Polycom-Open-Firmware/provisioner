@@ -8,6 +8,7 @@
 import * as React from "react";
 import { RefreshCw } from "lucide-react";
 import { useWizard } from "@/lib/wizard";
+import { Select } from "@/components/ui/select";
 import { listOsBuilds, type OsBuild } from "@/os-catalog";
 
 function optionLabel(b: OsBuild): string {
@@ -61,20 +62,19 @@ export function OsChooser() {
       {!err && builds?.length === 0 && <div className="text-[13px] text-muted">No OS builds found.</div>}
 
       {builds && builds.length > 0 && (
-        <select
+        <Select
           value={selectedOs?.tag ?? builds[0]!.tag}
           onChange={(e) => {
             const b = builds.find((x) => x.tag === e.target.value);
             if (b) selectOs(b);
           }}
-          className="w-full rounded-[8px] border border-border bg-background px-3 py-2.5 text-[15px] text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         >
           {builds.map((b) => (
             <option key={b.tag} value={b.tag}>
               {optionLabel(b)}
             </option>
           ))}
-        </select>
+        </Select>
       )}
     </div>
   );

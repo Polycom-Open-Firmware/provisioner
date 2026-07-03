@@ -13,6 +13,7 @@
 import * as React from "react";
 import { configStore, type ConfigFields, type ConfigKey } from "@provisioner/core";
 import { useWizard } from "@/lib/wizard";
+import { Input } from "@/components/ui/input";
 
 interface FieldDef {
   key: ConfigKey;
@@ -53,7 +54,7 @@ export function ConfigForm() {
           <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
             {f.label}
           </span>
-          <input
+          <Input
             type={f.type ?? "text"}
             value={vals[f.key] ?? ""}
             placeholder={f.placeholder}
@@ -61,7 +62,6 @@ export function ConfigForm() {
             autoComplete="off"
             spellCheck={false}
             onChange={(e) => update(f.key, e.target.value)}
-            className="rounded-[8px] border border-border bg-background px-3 py-2 text-[14px] text-foreground placeholder:text-muted focus:border-primary focus:outline-none disabled:opacity-55"
           />
         </label>
       ))}
