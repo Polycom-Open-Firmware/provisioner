@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 // reinstall-linux.ts — the "Reinstall Linux" flow (design notes: 4 steps). Loads
-// Debian onto an already-unlocked TC8 and reboots into it. Ported from the
+// Debian onto an already-unlocked device and reboots into it. Ported from the
 // pathfinder `provision-tool/src/flashos.js`: flashes the Android-format slot
-// images (boot/dtbo/vbmeta) then the multi-GB rootfs to `userdata` via the
-// Android sparse protocol, sets the active slot, and reboots.
+// images (boot/dtbo/vbmeta) then the multi-GB rootfs — to the manifest's
+// rootfs target (`userdata` on TC8, `system_a` on C60) — via the Android
+// sparse protocol, sets the active slot, and reboots.
 import { flashSparse, parseSparse, planResparse } from "../protocol/sparse";
 import type { Flow, FlowContext, Step } from "../engine/types";
 import {
@@ -13,9 +14,9 @@ import {
   configFieldsToLines,
   configStore,
 } from "../config/blob";
-import { ensurePartitionTable } from "./partitions";
+import { TC8_TABLE, ensurePartitionTable } from "./partitions";
 
-const SLOT = "a"; // "replace stock": overwrite boot_a/dtbo_a/vbmeta_a + userdata
+const SLOT = "a"; // "replace stock": overwrite boot_a/dtbo_a/vbmeta_a + the rootfs
 
 async function runFlash(ctx: FlowContext): Promise<void> {
   await ctx.connectUsb();
@@ -26,10 +27,28 @@ async function runFlash(ctx: FlowContext): Promise<void> {
   if (!ctx.fb.maxDownload)
     throw new Error("device did not report max-download-size; cannot sparse-flash");
 
-  // Repair the partition table first if it's been nuked — no serial, no brick.
-  await ensurePartitionTable(ctx, { fix: true });
-
   const man = await ctx.artifacts.manifest("os-manifest.json");
+  const rf = man?.rootfs;
+  if (!rf || !rf.url) throw new Error("manifest missing rootfs.url");
+  // TC8 manifests carry no `target` (rootfs → userdata); the C60's says system_a.
+  const rootfsTarget: string = rf.target ?? "userdata";
+
+  // Repair the partition table first if it's been nuked — no serial, no brick.
+  // What "intact" means comes from the manifest: `gptRestore` absent = a TC8-era
+  // manifest (default TC8 restore image); null = no restore image exists (C60 —
+  // the stock table is assumed intact); an object names the image.
+  await ensurePartitionTable(ctx, {
+    fix: true,
+    table: {
+      required: [rootfsTarget, "boot_" + SLOT],
+      restore:
+        man.gptRestore === undefined
+          ? TC8_TABLE.restore
+          : man.gptRestore
+            ? { image: man.gptRestore.url, diskSectors: man.gptRestore.diskSectors }
+            : null,
+    },
+  });
 
   // Fetch every artifact up front so the progress bar can run ONE 0→100 % across
   // the whole install (the small slot images + the multi-GB rootfs), weighted by
@@ -38,10 +57,8 @@ async function runFlash(ctx: FlowContext): Promise<void> {
   for (const key of ["boot", "dtbo", "vbmeta"] as const) {
     const a = man?.[key];
     if (!a || !a.url) throw new Error("manifest missing " + key + ".url");
-    small.push({ part: key + "_" + SLOT, data: await ctx.artifacts.binary(a.url) });
+    small.push({ part: a.target ?? key + "_" + SLOT, data: await ctx.artifacts.binary(a.url) });
   }
-  const rf = man?.rootfs;
-  if (!rf || !rf.url) throw new Error("manifest missing rootfs.url");
   const simg = await ctx.artifacts.binary(rf.url);
 
   // Materialized sparse byte count — the unit flashSparse reports progress in — so
@@ -64,14 +81,14 @@ async function runFlash(ctx: FlowContext): Promise<void> {
     ctx.log("  " + s.part + " OK");
   }
 
-  ctx.log("flashing userdata (sparse, " + simg.byteLength + " B sparse image)...");
-  await flashSparse(ctx.fb, "userdata", simg, {
+  ctx.log("flashing " + rootfsTarget + " (sparse, " + simg.byteLength + " B sparse image)...");
+  await flashSparse(ctx.fb, rootfsTarget, simg, {
     onProgress: (d) => ctx.progress(base + d, grandTotal),
     onInfo: info,
   });
   base += sparseTotal;
   ctx.progress(grandTotal, grandTotal);
-  ctx.log("  userdata OK");
+  ctx.log("  " + rootfsTarget + " OK");
 
   // If the operator supplied settings (the Unlock flow's config page), write the
   // config blob to the `cache` partition in this same fastboot session so the

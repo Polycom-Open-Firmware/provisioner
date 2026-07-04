@@ -18,9 +18,9 @@ import {
   configFieldsToLines,
   configStore,
 } from "../config/blob";
-import { ensurePartitionTable } from "./partitions";
+import { ensurePartitionTable, type TableSpec } from "./partitions";
 
-async function runApply(ctx: FlowContext): Promise<void> {
+async function runApply(ctx: FlowContext, table?: TableSpec): Promise<void> {
   await ctx.connectUsb();
 
   // identify — confirms we're talking to the unit's fastboot (also sets maxDownload).
@@ -29,7 +29,7 @@ async function runApply(ctx: FlowContext): Promise<void> {
 
   // Don't touch the filesystem if the partition table is borked — refuse and tell
   // the operator to run an install (which repairs it). We do NOT fix here.
-  await ensurePartitionTable(ctx, { fix: false });
+  await ensurePartitionTable(ctx, { fix: false, table });
 
   // Build the blob from the operator's draft. Blank fields are skipped, so the
   // device keeps its current value for anything left empty.
@@ -64,8 +64,9 @@ async function runApply(ctx: FlowContext): Promise<void> {
   ctx.log("DONE -- unit rebooting; config applied at boot.");
 }
 
-/** Build the Configure flow. */
-export function configureFlow(): Flow {
+/** Build the Configure flow. `table` overrides what the partition-table guard
+ *  probes (default: the TC8 table — the C60 has no `userdata`). */
+export function configureFlow(table?: TableSpec): Flow {
   return {
     id: "configure",
     title: "Configure",
@@ -91,7 +92,7 @@ export function configureFlow(): Flow {
           "Then connect the device over USB and choose it from the list to apply the settings.",
         gesture: "connect-usb",
         confirmLabel: "Connect & apply",
-        run: runApply,
+        run: (ctx) => runApply(ctx, table),
       },
       {
         id: "done",

@@ -100,9 +100,12 @@ export function c60Profile(): Device {
     filters: C60_FILTERS,
     flows: [
       c60UnlockFlow(),
-      // Post-boot, identical to the TC8 — reused verbatim.
+      // Post-boot, the same flows as the TC8. Install reads its rootfs target and
+      // table from c60-manifest.json's `os` section (rootfs → system_a, no GPT
+      // restore — the stock Polycom table is assumed intact). Configure only needs
+      // its guard retargeted: the stock C60 GPT has no `userdata`.
       reinstallLinuxFlow(),
-      configureFlow(),
+      configureFlow({ required: ["system_a", "boot_a"], restore: null }),
     ],
   };
 }
