@@ -94,6 +94,7 @@ export function c60UnlockFlow(): Flow {
           "so the device reboots straight into Linux when the install finishes.",
         {
           connectImage: "/c60/usb-connect.svg",
+          install: { replaceBootloader: true },
           doneBody:
             "The device is rebooting into Debian. If the BOOT_MODE switches are still in the " +
             "recovery position, flip them back and power-cycle — in recovery position the device " +
@@ -122,6 +123,7 @@ export function c60Profile(): Device {
           "is already in fastboot, connect it over USB and choose it from the list.",
         {
           connectImage: "/c60/usb-connect.svg",
+          install: { replaceBootloader: true },
           doneBody:
             "The device is rebooting into Debian. If the BOOT_MODE switches are still in the " +
             "recovery position, flip them back and power-cycle — in recovery position the device " +

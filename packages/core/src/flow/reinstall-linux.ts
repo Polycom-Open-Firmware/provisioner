@@ -18,7 +18,56 @@ import { TC8_TABLE, ensurePartitionTable } from "./partitions";
 
 const SLOT = "a"; // "replace stock": overwrite boot_a/dtbo_a/vbmeta_a + the rootfs
 
-async function runFlash(ctx: FlowContext): Promise<void> {
+interface InstallOptions {
+  /** C60 only: persist the SDP-loaded open U-Boot into the eMMC boot area. */
+  replaceBootloader?: boolean;
+}
+
+interface RawPartitionSpec {
+  startLBA: number;
+  sizeLBA: number;
+}
+
+interface ManifestArtifact {
+  url?: string;
+  target?: string;
+  raw?: RawPartitionSpec;
+}
+
+async function sha256Hex(data: Uint8Array): Promise<string> {
+  const bytes = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  return Array.from(hash, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function replaceC60Bootloader(ctx: FlowContext, info: (msg: string) => void): Promise<void> {
+  const man = await ctx.artifacts.manifest("c60-manifest.json");
+  const fb = man?.flashbin;
+  if (!fb || !fb.url) throw new Error("c60 manifest has no flashbin.url");
+
+  const image = await ctx.artifacts.binary(fb.url);
+  if (typeof fb.size === "number" && fb.size !== image.byteLength)
+    throw new Error("c60 flash.bin size mismatch: manifest " + fb.size + " B, artifact " + image.byteLength + " B");
+  if (typeof fb.sha256 === "string") {
+    const got = await sha256Hex(image);
+    if (got !== fb.sha256.toLowerCase())
+      throw new Error("c60 flash.bin sha256 mismatch: manifest " + fb.sha256 + ", got " + got);
+  }
+
+  ctx.log("persisting C60 open bootloader to eMMC boot area (" + image.byteLength + " B)...");
+  // NXP/FSL fastboot predefines this as bootloader0 on A/B builds, bootloader otherwise.
+  try {
+    await ctx.fb.flash("bootloader0", image, undefined, info);
+  } catch (e) {
+    const msg = (e as Error).message;
+    if (!msg.includes("partition does not exist")) throw e;
+    ctx.log("  bootloader0 missing; retrying bootloader");
+    await ctx.fb.flash("bootloader", image, undefined, info);
+  }
+  ctx.log("  C60 bootloader persisted");
+}
+
+async function runFlash(ctx: FlowContext, opts: InstallOptions = {}): Promise<void> {
   await ctx.connectUsb();
 
   // identify — also sets fb.maxDownload, which the sparse splitter needs.
@@ -28,36 +77,58 @@ async function runFlash(ctx: FlowContext): Promise<void> {
     throw new Error("device did not report max-download-size; cannot sparse-flash");
 
   const man = await ctx.artifacts.manifest("os-manifest.json");
-  const rf = man?.rootfs;
+  const rf = man?.rootfs as ManifestArtifact | undefined;
   if (!rf || !rf.url) throw new Error("manifest missing rootfs.url");
   // TC8 manifests carry no `target` (rootfs → userdata); the C60's says system_a.
   const rootfsTarget: string = rf.target ?? "userdata";
 
-  // Repair the partition table first if it's been nuked — no serial, no brick.
-  // What "intact" means comes from the manifest: `gptRestore` absent = a TC8-era
-  // manifest (default TC8 restore image); null = no restore image exists (C60 —
-  // the stock table is assumed intact); an object names the image.
-  await ensurePartitionTable(ctx, {
-    fix: true,
-    table: {
-      required: [rootfsTarget, "boot_" + SLOT],
-      restore:
-        man.gptRestore === undefined
-          ? TC8_TABLE.restore
-          : man.gptRestore
-            ? { image: man.gptRestore.url, diskSectors: man.gptRestore.diskSectors }
-            : null,
-    },
+  // fastboot INFO lines are verbose — send them to the dev console, not the
+  // operator-facing Status Log.
+  const info = (m: string) => { try { console.info("[fastboot] " + m); } catch { /* no console */ } };
+
+  const smallDefs = (["boot", "dtbo", "vbmeta"] as const).map((key) => {
+    const entry = man?.[key] as ManifestArtifact | undefined;
+    if (!entry || !entry.url) throw new Error("manifest missing " + key + ".url");
+    return { key, entry, part: entry.target ?? key + "_" + SLOT };
   });
+  const rawDefs = [...smallDefs.map((d) => ({ part: d.part, raw: d.entry.raw })), { part: rootfsTarget, raw: rf.raw }];
+  const hasRawInstallMap = rawDefs.every((d) => d.raw);
+
+  if (hasRawInstallMap) {
+    ctx.log("defining C60 raw fastboot partitions from manifest...");
+    for (const d of rawDefs) {
+      await ctx.fb.defineRawPartition(d.part, d.raw!.startLBA, d.raw!.sizeLBA, info);
+      ctx.log("  " + d.part + " = 0x" + d.raw!.startLBA.toString(16) + "+0x" + d.raw!.sizeLBA.toString(16));
+    }
+  }
+
+  if (hasRawInstallMap && man.gptRestore === null) {
+    ctx.log("using manifest raw partition map; skipping GPT-name probe.");
+  } else {
+    // Repair the partition table first if it's been nuked — no serial, no brick.
+    // What "intact" means comes from the manifest: `gptRestore` absent = a TC8-era
+    // manifest (default TC8 restore image); null = no restore image exists (C60 —
+    // the stock table is assumed intact); an object names the image.
+    await ensurePartitionTable(ctx, {
+      fix: true,
+      table: {
+        required: [rootfsTarget, "boot_" + SLOT],
+        restore:
+          man.gptRestore === undefined
+            ? TC8_TABLE.restore
+            : man.gptRestore
+              ? { image: man.gptRestore.url, diskSectors: man.gptRestore.diskSectors }
+              : null,
+      },
+    });
+  }
 
   // Fetch every artifact up front so the progress bar can run ONE 0→100 % across
   // the whole install (the small slot images + the multi-GB rootfs), weighted by
   // bytes — instead of resetting per partition.
   const small: { part: string; data: Uint8Array }[] = [];
-  for (const key of ["boot", "dtbo", "vbmeta"] as const) {
-    const a = man?.[key];
-    if (!a || !a.url) throw new Error("manifest missing " + key + ".url");
-    small.push({ part: a.target ?? key + "_" + SLOT, data: await ctx.artifacts.binary(a.url) });
+  for (const d of smallDefs) {
+    small.push({ part: d.part, data: await ctx.artifacts.binary(d.entry.url!) });
   }
   const simg = await ctx.artifacts.binary(rf.url);
 
@@ -68,10 +139,9 @@ async function runFlash(ctx: FlowContext): Promise<void> {
     0,
   );
   const grandTotal = small.reduce((a, s) => a + s.data.byteLength, 0) + sparseTotal;
-  // fastboot INFO lines are verbose — send them to the dev console, not the
-  // operator-facing Status Log.
-  const info = (m: string) => { try { console.info("[fastboot] " + m); } catch { /* no console */ } };
   let base = 0;
+
+  if (opts.replaceBootloader) await replaceC60Bootloader(ctx, info);
 
   for (const s of small) {
     ctx.log("flashing " + s.part + " (" + s.data.byteLength + " B)...");
@@ -127,7 +197,7 @@ async function runFlash(ctx: FlowContext): Promise<void> {
 export function osInstallSteps(
   idPrefix = "os",
   connectBody?: string,
-  opts?: { connectImage?: string; doneBody?: string; doneImage?: string },
+  opts?: { connectImage?: string; doneBody?: string; doneImage?: string; install?: InstallOptions },
 ): Step[] {
   return [
     {
@@ -141,7 +211,7 @@ export function osInstallSteps(
       image: opts?.connectImage,
       gesture: "connect-usb",
       confirmLabel: "Connect & install",
-      run: runFlash,
+      run: (ctx) => runFlash(ctx, opts?.install),
     },
     {
       id: `${idPrefix}-done`,
@@ -184,7 +254,7 @@ export function setupStep(): Step {
 
 export function reinstallLinuxFlow(
   connectBody?: string,
-  opts?: { connectImage?: string; doneBody?: string; doneImage?: string },
+  opts?: { connectImage?: string; doneBody?: string; doneImage?: string; install?: InstallOptions },
 ): Flow {
   return {
     id: "reinstall-linux",

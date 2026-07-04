@@ -29,6 +29,9 @@ const FIELDS: FieldDef[] = [
   { key: "KIOSK_URL", label: "Kiosk URL", placeholder: "https://dash.local  or  rtsp://…" },
   { key: "TIMEZONE", label: "Time zone", placeholder: "America/New_York" },
   { key: "NTP_SERVER", label: "NTP server", placeholder: "192.168.1.1" },
+  { key: "WIFI_SSID", label: "Wi-Fi SSID", placeholder: "Corp-Guest" },
+  { key: "WIFI_PASSWORD", label: "Wi-Fi password", placeholder: "leave blank for open Wi-Fi or to keep current", type: "password" },
+  { key: "WIFI_COUNTRY", label: "Wi-Fi country", placeholder: "US" },
   { key: "ROOT_PASSWORD", label: "Root password", placeholder: "leave blank to keep current", type: "password" },
   { key: "SSH_AUTHKEY", label: "SSH public key", placeholder: "ssh-ed25519 AAAA…" },
 ];
