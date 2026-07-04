@@ -84,7 +84,15 @@ export function StepContent() {
         <Slideshow images={step.gallery} className="mt-6" />
       )}
 
-      {showConnectUi && gesture && <GestureHint gesture={gesture} />}
+      {step.image && (
+        <img
+          src={step.image}
+          alt=""
+          className="mx-auto mt-6 block max-h-[min(34vh,300px)] w-auto rounded-[8px] border border-border object-contain"
+        />
+      )}
+
+      {showConnectUi && gesture && !step.image && <GestureHint gesture={gesture} />}
 
       {showConnectUi && gesture === "connect-serial" && isTauri() && <NativeSerialPicker />}
 

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 260" font-family="ui-sans-serif, system-ui, sans-serif">
+  <!-- Placeholder illustration: C60 connected to the computer over USB.
+       Replace with a bench photo when one exists. -->
+  <rect x="0.5" y="0.5" width="479" height="259" rx="10" fill="none" stroke="#9aa1ab" stroke-opacity="0.35"/>
+  <text x="464" y="26" text-anchor="end" font-size="11" letter-spacing="1.5" fill="#9aa1ab" fill-opacity="0.7">PLACEHOLDER</text>
+
+  <!-- laptop -->
+  <g stroke="#9aa1ab" stroke-width="2" fill="none">
+    <rect x="46" y="76" width="120" height="78" rx="6"/>
+    <path d="M 34 154 H 178 L 170 172 H 42 Z"/>
+  </g>
+  <text x="106" y="196" text-anchor="middle" font-size="11" fill="#6f7680">computer</text>
+
+  <!-- cable -->
+  <path d="M 178 130 C 220 130 240 130 282 130" stroke="#9aa1ab" stroke-width="2" fill="none" stroke-dasharray="none"/>
+  <rect x="170" y="123" width="14" height="14" rx="3" fill="#9aa1ab"/>
+  <rect x="282" y="123" width="14" height="14" rx="3" fill="#9aa1ab"/>
+
+  <!-- C60 (conference phone, top view) -->
+  <g stroke="#9aa1ab" stroke-width="2" fill="none">
+    <rect x="296" y="66" width="140" height="128" rx="18"/>
+    <rect x="326" y="96" width="80" height="68" rx="8"/>
+  </g>
+  <text x="366" y="216" text-anchor="middle" font-size="11" fill="#6f7680">Trio C60</text>
+
+  <text x="240" y="238" text-anchor="middle" font-size="12" fill="#6f7680">Connect the C60 over USB and choose it from the list</text>
+</svg>

@@ -58,6 +58,7 @@ export function c60UnlockFlow(): Flow {
           "Set both BOOT_MODE switches to OFF so the chip enters USB recovery, and connect the USB " +
           "cable. Press the button and choose the recovery device (a vendor HID device) to load the " +
           "first stage.",
+        image: "/c60/recovery-mode.svg",
         gesture: "connect-hid",
         confirmLabel: "Connect & load",
         hidFilters: [{ vendorId: SDP_VID, productId: SDP_PID_BOOTROM }],
@@ -75,6 +76,7 @@ export function c60UnlockFlow(): Flow {
         body:
           "The first stage brought up memory and the device re-appeared as a download gadget. Press " +
           "the button and choose it again to load and start the open bootloader.",
+        image: "/c60/usb-connect.svg",
         gesture: "connect-hid",
         confirmLabel: "Connect & start",
         hidFilters: [{ vendorId: SDP_VID, productId: SDP_PID_SPL }],
@@ -87,7 +89,17 @@ export function c60UnlockFlow(): Flow {
       ...osInstallSteps(
         "os",
         "The open bootloader is starting and the device will enter programming mode. When it does, " +
-          "connect it over USB and choose it from the list to install Linux.",
+          "connect it over USB and choose it from the list to install Linux. While it flashes, flip " +
+          "both BOOT_MODE switches back to their normal position — they are only read at power-on, " +
+          "so the device reboots straight into Linux when the install finishes.",
+        {
+          connectImage: "/c60/usb-connect.svg",
+          doneBody:
+            "The device is rebooting into Debian. If the BOOT_MODE switches are still in the " +
+            "recovery position, flip them back and power-cycle — in recovery position the device " +
+            "comes back as a USB recovery device instead of booting.",
+          doneImage: "/c60/switches-back.svg",
+        },
       ),
     ],
   };
@@ -104,7 +116,19 @@ export function c60Profile(): Device {
       // table from c60-manifest.json's `os` section (rootfs → system_a, no GPT
       // restore — the stock Polycom table is assumed intact). Configure only needs
       // its guard retargeted: the stock C60 GPT has no `userdata`.
-      reinstallLinuxFlow(),
+      reinstallLinuxFlow(
+        "The C60 enters fastboot through USB recovery: set both BOOT_MODE switches to OFF, " +
+          "power-cycle, and run the two recovery steps of Unlock and Install — or, if the device " +
+          "is already in fastboot, connect it over USB and choose it from the list.",
+        {
+          connectImage: "/c60/usb-connect.svg",
+          doneBody:
+            "The device is rebooting into Debian. If the BOOT_MODE switches are still in the " +
+            "recovery position, flip them back and power-cycle — in recovery position the device " +
+            "comes back as a USB recovery device instead of booting.",
+          doneImage: "/c60/switches-back.svg",
+        },
+      ),
       configureFlow({ required: ["system_a", "boot_a"], restore: null }),
     ],
   };

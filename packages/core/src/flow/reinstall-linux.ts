@@ -124,7 +124,11 @@ async function runFlash(ctx: FlowContext): Promise<void> {
  * on the leftover stock Android). `idPrefix` keeps step ids unique when these are
  * appended to another flow; `connectBody` tailors the connect-step copy.
  */
-export function osInstallSteps(idPrefix = "os", connectBody?: string): Step[] {
+export function osInstallSteps(
+  idPrefix = "os",
+  connectBody?: string,
+  opts?: { connectImage?: string; doneBody?: string; doneImage?: string },
+): Step[] {
   return [
     {
       id: `${idPrefix}-flash`,
@@ -134,6 +138,7 @@ export function osInstallSteps(idPrefix = "os", connectBody?: string): Step[] {
       body:
         connectBody ??
         "Connect the device over USB and choose it from the list to begin. This takes a few minutes.",
+      image: opts?.connectImage,
       gesture: "connect-usb",
       confirmLabel: "Connect & install",
       run: runFlash,
@@ -143,7 +148,8 @@ export function osInstallSteps(idPrefix = "os", connectBody?: string): Step[] {
       type: "done",
       rail: "Done",
       title: "Linux installed",
-      body: "The device is rebooting into Debian.",
+      body: opts?.doneBody ?? "The device is rebooting into Debian.",
+      image: opts?.doneImage,
     },
   ];
 }
@@ -176,7 +182,10 @@ export function setupStep(): Step {
   };
 }
 
-export function reinstallLinuxFlow(): Flow {
+export function reinstallLinuxFlow(
+  connectBody?: string,
+  opts?: { connectImage?: string; doneBody?: string; doneImage?: string },
+): Flow {
   return {
     id: "reinstall-linux",
     title: "Install or Update OS",
@@ -185,8 +194,10 @@ export function reinstallLinuxFlow(): Flow {
       chooseOsStep(),
       ...osInstallSteps(
         "os",
-        "When you see the submarine logo, touch the screen with four fingers to enter fastboot. " +
-          "Then connect the device over USB and choose it from the list to begin.",
+        connectBody ??
+          "When you see the submarine logo, touch the screen with four fingers to enter fastboot. " +
+            "Then connect the device over USB and choose it from the list to begin.",
+        opts,
       ),
     ],
   };

@@ -25,6 +25,9 @@ interface StepBase {
   body?: string;
   /** Ordered image URLs to show as a step-through slideshow (e.g. disassembly). */
   gallery?: string[];
+  /** Single illustration for this step. On gesture steps it REPLACES the built-in
+   *  device-generic connect hint (so devices don't inherit another device's photo). */
+  image?: string;
 }
 
 export interface InfoStep extends StepBase {
