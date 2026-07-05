@@ -20,16 +20,36 @@ import {
 } from "../config/blob";
 import { ensurePartitionTable, type TableSpec } from "./partitions";
 
-async function runApply(ctx: FlowContext, table?: TableSpec): Promise<void> {
+interface RawPartitionSpec {
+  startLBA: number;
+  sizeLBA: number;
+}
+
+interface ConfigureOptions {
+  table?: TableSpec;
+  rawConfig?: RawPartitionSpec;
+}
+
+async function runApply(ctx: FlowContext, opts: ConfigureOptions = {}): Promise<void> {
   await ctx.connectUsb();
 
   // identify — confirms we're talking to the unit's fastboot (also sets maxDownload).
   const id = await ctx.fb.identify();
   ctx.log("device: " + (id["product"] ?? "?") + "   serial=" + (id["serialno"] ?? "?"));
 
+  const info = (m: string) => { try { console.info("[fastboot] " + m); } catch { /* no console */ } };
+
   // Don't touch the filesystem if the partition table is borked — refuse and tell
   // the operator to run an install (which repairs it). We do NOT fix here.
-  await ensurePartitionTable(ctx, { fix: false, table });
+  if (opts.rawConfig) {
+    ctx.log(
+      "defining raw " + CONFIG_PARTITION + " partition: 0x" +
+        opts.rawConfig.startLBA.toString(16) + "+0x" + opts.rawConfig.sizeLBA.toString(16),
+    );
+    await ctx.fb.defineRawPartition(CONFIG_PARTITION, opts.rawConfig.startLBA, opts.rawConfig.sizeLBA, info);
+  } else {
+    await ensurePartitionTable(ctx, { fix: false, table: opts.table });
+  }
 
   // Build the blob from the operator's draft. Blank fields are skipped, so the
   // device keeps its current value for anything left empty.
@@ -53,7 +73,7 @@ async function runApply(ctx: FlowContext, table?: TableSpec): Promise<void> {
     CONFIG_PARTITION,
     blob,
     (d, t) => ctx.progress(d, t),
-    (m) => { try { console.info("[fastboot] " + m); } catch { /* no console */ } },
+    info,
   );
   ctx.progress(blob.byteLength, blob.byteLength);
   ctx.log("  " + CONFIG_PARTITION + " OK");
@@ -64,9 +84,10 @@ async function runApply(ctx: FlowContext, table?: TableSpec): Promise<void> {
   ctx.log("DONE -- unit rebooting; config applied at boot.");
 }
 
-/** Build the Configure flow. `table` overrides what the partition-table guard
- *  probes (default: the TC8 table — the C60 has no `userdata`). */
-export function configureFlow(table?: TableSpec): Flow {
+/** Build the Configure flow. `table` overrides the GPT guard; `rawConfig`
+ *  defines the config target directly for fastboot builds with broken GPT probes. */
+export function configureFlow(opts: TableSpec | ConfigureOptions = {}): Flow {
+  const options: ConfigureOptions = "required" in opts ? { table: opts } : opts;
   return {
     id: "configure",
     title: "Configure",
@@ -92,7 +113,7 @@ export function configureFlow(table?: TableSpec): Flow {
           "Then connect the device over USB and choose it from the list to apply the settings.",
         gesture: "connect-usb",
         confirmLabel: "Connect & apply",
-        run: (ctx) => runApply(ctx, table),
+        run: (ctx) => runApply(ctx, options),
       },
       {
         id: "done",

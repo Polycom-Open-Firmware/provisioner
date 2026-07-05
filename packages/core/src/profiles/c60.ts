@@ -114,9 +114,8 @@ export function c60Profile(): Device {
     flows: [
       c60UnlockFlow(),
       // Post-boot, the same flows as the TC8. Install reads its rootfs target and
-      // table from c60-manifest.json's `os` section (rootfs → system_a, no GPT
-      // restore — the stock Polycom table is assumed intact). Configure only needs
-      // its guard retargeted: the stock C60 GPT has no `userdata`.
+      // raw partition map from the manifest. Configure also uses the raw cache LBA
+      // because C60 fastboot does not reliably answer GPT partition-size probes.
       reinstallLinuxFlow(
         "The C60 enters fastboot through USB recovery: set both BOOT_MODE switches to OFF, " +
           "power-cycle, and run the two recovery steps of Unlock and Install — or, if the device " +
@@ -131,7 +130,7 @@ export function c60Profile(): Device {
           doneImage: "/c60/switches-back.svg",
         },
       ),
-      configureFlow({ required: ["system_a", "boot_a"], restore: null }),
+      configureFlow({ rawConfig: { startLBA: 0x738000, sizeLBA: 0x200000 } }),
     ],
   };
 }
