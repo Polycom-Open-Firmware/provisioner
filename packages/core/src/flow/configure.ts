@@ -30,6 +30,16 @@ interface ConfigureOptions {
   rawConfig?: RawPartitionSpec;
 }
 
+const C60_FASTBOOT_BUF_ADDR = 0x42800000;
+
+function padToBlock(data: Uint8Array, blockSize: number): Uint8Array {
+  const paddedSize = Math.ceil(data.byteLength / blockSize) * blockSize;
+  if (paddedSize === data.byteLength) return data;
+  const out = new Uint8Array(paddedSize);
+  out.set(data);
+  return out;
+}
+
 async function runApply(ctx: FlowContext, opts: ConfigureOptions = {}): Promise<void> {
   await ctx.connectUsb();
 
@@ -41,15 +51,7 @@ async function runApply(ctx: FlowContext, opts: ConfigureOptions = {}): Promise<
 
   // Don't touch the filesystem if the partition table is borked — refuse and tell
   // the operator to run an install (which repairs it). We do NOT fix here.
-  if (opts.rawConfig) {
-    ctx.log(
-      "defining raw " + CONFIG_PARTITION + " partition: 0x" +
-        opts.rawConfig.startLBA.toString(16) + "+0x" + opts.rawConfig.sizeLBA.toString(16),
-    );
-    await ctx.fb.defineRawPartition(CONFIG_PARTITION, opts.rawConfig.startLBA, opts.rawConfig.sizeLBA, info);
-  } else {
-    await ensurePartitionTable(ctx, { fix: false, table: opts.table });
-  }
+  if (!opts.rawConfig) await ensurePartitionTable(ctx, { fix: false, table: opts.table });
 
   // Build the blob from the operator's draft. Blank fields are skipped, so the
   // device keeps its current value for anything left empty.
@@ -68,15 +70,37 @@ async function runApply(ctx: FlowContext, opts: ConfigureOptions = {}): Promise<
       (blob.byteLength - 64) + " payload)",
   );
 
-  ctx.log("flashing " + CONFIG_PARTITION + " (config blob)...");
-  await ctx.fb.flash(
-    CONFIG_PARTITION,
-    blob,
-    (d, t) => ctx.progress(d, t),
-    info,
-  );
-  ctx.progress(blob.byteLength, blob.byteLength);
-  ctx.log("  " + CONFIG_PARTITION + " OK");
+  if (opts.rawConfig) {
+    const blockSize = 512;
+    const padded = padToBlock(blob, blockSize);
+    const blocks = padded.byteLength / blockSize;
+    if (blocks > opts.rawConfig.sizeLBA)
+      throw new Error("config blob exceeds raw " + CONFIG_PARTITION + " partition");
+
+    ctx.log(
+      "writing " + CONFIG_PARTITION + " directly at 0x" + opts.rawConfig.startLBA.toString(16) +
+        " (" + blocks + " block" + (blocks === 1 ? "" : "s") + ")...",
+    );
+    await ctx.fb.download(padded, (d) => ctx.progress(Math.min(d, blob.byteLength), blob.byteLength));
+    await ctx.fb.ucmd("mmc dev 0 0", info);
+    await ctx.fb.ucmd(
+      "mmc write 0x" + C60_FASTBOOT_BUF_ADDR.toString(16) + " 0x" +
+        opts.rawConfig.startLBA.toString(16) + " 0x" + blocks.toString(16),
+      info,
+    );
+    ctx.progress(blob.byteLength, blob.byteLength);
+    ctx.log("  " + CONFIG_PARTITION + " OK");
+  } else {
+    ctx.log("flashing " + CONFIG_PARTITION + " (config blob)...");
+    await ctx.fb.flash(
+      CONFIG_PARTITION,
+      blob,
+      (d, t) => ctx.progress(d, t),
+      info,
+    );
+    ctx.progress(blob.byteLength, blob.byteLength);
+    ctx.log("  " + CONFIG_PARTITION + " OK");
+  }
 
   // Reboot so the boot-time reader applies the new config.
   ctx.log("rebooting so the device applies the new configuration...");
