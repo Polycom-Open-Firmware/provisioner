@@ -106,11 +106,6 @@ export function c60UnlockFlow(): Flow {
           connectImage: "/c60/usb-connect.svg",
           install: { replaceBootloader: true },
           danger: C60_INSTALL_DANGER,
-          doneBody:
-            "The device is rebooting into Debian. If the BOOT_MODE switches are still in the " +
-            "recovery position, flip them back and power-cycle — in recovery position the device " +
-            "comes back as a USB recovery device instead of booting.",
-          doneImage: "/c60/switches-back.svg",
         },
       ),
     ],
@@ -128,18 +123,15 @@ export function c60Profile(): Device {
       // raw partition map from the manifest. Configure also uses the raw cache LBA
       // because C60 fastboot does not reliably answer GPT partition-size probes.
       reinstallLinuxFlow(
-        "The C60 enters fastboot through USB recovery: set both BOOT_MODE switches to OFF, " +
-          "power-cycle, and run the two recovery steps of Unlock and Install — or, if the device " +
-          "is already in fastboot, connect it over USB and choose it from the list.",
+        "Power-cycle the device with the USB cable connected. When the mic/center light cue " +
+          "appears, hold four fingers on the screen during the 20-second window — the device " +
+          "enters programming mode. Then choose it from the list to begin. If it never appears " +
+          "(for example the device still has its stock bootloader), set both BOOT_MODE switches " +
+          "to OFF and run the two recovery steps of Unlock and Install instead.",
         {
           connectImage: "/c60/usb-connect.svg",
           install: { replaceBootloader: true },
           danger: C60_INSTALL_DANGER,
-          doneBody:
-            "The device is rebooting into Debian. If the BOOT_MODE switches are still in the " +
-            "recovery position, flip them back and power-cycle — in recovery position the device " +
-            "comes back as a USB recovery device instead of booting.",
-          doneImage: "/c60/switches-back.svg",
         },
       ),
       configureFlow({ rawConfig: { startLBA: 0x738000, sizeLBA: 0x200000 } }),
