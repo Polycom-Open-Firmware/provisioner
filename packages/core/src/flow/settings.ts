@@ -25,32 +25,8 @@ export interface SettingsSection {
 }
 
 // --- the standard sections (keys: tc8-firmware-build/CONFIG-PARTITION.md) -----
-
-// The device ROLE. Written as PROFILE= in the config blob; the device activates
-// the matching baked profile on first boot (no network needed — profiles are
-// baked in). Kiosk is the production default; dev is for development units.
-export const PROFILE_SETTINGS: SettingsSection = {
-  id: "profile",
-  rail: "Profile",
-  title: "Device profile",
-  intro: "Pick what this device is for — the profile decides what runs at boot.",
-  form: {
-    fields: [
-      {
-        key: "PROFILE",
-        label: "Profile",
-        options: [
-          { value: "kiosk", label: "Kiosk — locked full-screen browser to the Kiosk URL (production default)" },
-          { value: "dev", label: "Dev — SSH + root shell, no kiosk lock (development units)" },
-        ],
-      },
-    ],
-    note:
-      "Kiosk locks the panel to its Kiosk URL. Dev leaves it unlocked with SSH " +
-      "enabled — set an SSH key or root password under Access. Left unset, the " +
-      "device defaults to kiosk.",
-  },
-};
+// The Application page (the device-role picker) is per-device — built from each
+// device's catalog by applicationSection() in ./applications.ts.
 
 export const DEVICE_SETTINGS: SettingsSection = {
   id: "device",
@@ -108,7 +84,6 @@ export const ACCESS_SETTINGS: SettingsSection = {
 };
 
 export const STANDARD_SETTINGS: SettingsSection[] = [
-  PROFILE_SETTINGS,
   DEVICE_SETTINGS,
   NETWORK_SETTINGS,
   ACCESS_SETTINGS,

@@ -42,6 +42,15 @@ export {
   STANDARD_SETTINGS,
 } from "./flow/settings";
 export type { SettingsIntent, SettingsSection } from "./flow/settings";
+export {
+  applicationSection,
+  APP_KIOSK,
+  APP_DEV,
+  APP_SMART_SPEAKER,
+  TC8_APPLICATIONS,
+  C60_APPLICATIONS,
+} from "./flow/applications";
+export type { Application } from "./flow/applications";
 
 // Config (the autoconfigure `cache` blob — see tc8-firmware-build/CONFIG-PARTITION.md)
 export {
