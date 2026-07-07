@@ -15,7 +15,7 @@
 // clients shipped before the param existed keep working unchanged.
 
 const REPOS = {
-  tc8: "Polycom-Open-Firmware/tc8-firmware-build",
+  tc8: "Polycom-Open-Firmware/poly-firmware-build",
   c60: "Polycom-Open-Firmware/c60-firmware-build",
 };
 const CORS = {
