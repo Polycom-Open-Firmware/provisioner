@@ -16,7 +16,7 @@
 import type { UsbFilter } from "../transport/transport";
 import type { Device, Flow, FlowContext } from "../engine/types";
 import { SDP_PID_BOOTROM, SDP_PID_SPL, SDP_VID } from "../protocol/sdp";
-import { reinstallLinuxFlow, osInstallSteps, setupStep } from "../flow/reinstall-linux";
+import { reinstallLinuxFlow, osInstallSteps, setupSteps } from "../flow/reinstall-linux";
 import { configureFlow } from "../flow/configure";
 
 /** The C60 U-Boot fastboot gadget (post-boot), for the Install/Configure choosers. */
@@ -48,7 +48,7 @@ export function c60UnlockFlow(): Flow {
     title: "Unlock and Install",
     summary: "Load the open bootloader over USB recovery and install Linux — all in the browser.",
     steps: [
-      setupStep(),
+      ...setupSteps(),
       {
         id: "load-spl",
         type: "action",

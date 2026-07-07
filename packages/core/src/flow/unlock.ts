@@ -7,7 +7,7 @@
 // geometry, re-expressed as wizard steps that share a per-flow `state` object.
 import { sleep } from "../transport/transport";
 import type { Flow, FlowContext } from "../engine/types";
-import { osInstallSteps, setupStep } from "./reinstall-linux";
+import { osInstallSteps, setupSteps } from "./reinstall-linux";
 
 // --- geometry (option-A layout, identical to tc8_enroll.py / enroll.js) -------
 const BOOTB_LBA = 0x20000; // boot_b start (disposable transfer slot, user area)
@@ -121,7 +121,7 @@ export function unlockFlow(): Flow {
     title: "Unlock and Install",
     summary: "Unlock a fresh device and install Linux — one-time, needs serial.",
     steps: [
-      setupStep(),
+      ...setupSteps(),
       {
         id: "disassembly",
         type: "info",

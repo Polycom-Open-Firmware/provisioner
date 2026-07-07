@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Slideshow } from "./Slideshow";
 import { NativeSerialPicker } from "./NativeSerialPicker";
 import { NativeUsbPicker } from "./NativeUsbPicker";
-import { ConfigForm } from "./ConfigForm";
+import { ConfigForm, type ConfigSection } from "./ConfigForm";
 import { OsChooser } from "./OsChooser";
 import { Caption } from "@/components/ui/caption";
 import { isTauri } from "@/native/backend";
@@ -76,9 +76,11 @@ export function StepContent() {
       <h1 className="mt-2 text-[27px] font-bold tracking-[-0.02em] text-foreground">{step.title}</h1>
       {step.body && <p className="mt-3 text-[15px] leading-relaxed text-body">{step.body}</p>}
 
-      {(step.id === "setup" || step.id === "choose-os") && <OsChooser />}
+      {step.id === "choose-os" && <OsChooser />}
 
-      {(step.id === "setup" || step.id === "settings") && <ConfigForm />}
+      {step.id.startsWith("settings-") && (
+        <ConfigForm key={step.id} section={step.id.slice("settings-".length) as ConfigSection} />
+      )}
 
       {step.gallery && step.gallery.length > 0 && (
         <Slideshow images={step.gallery} className="mt-6" />

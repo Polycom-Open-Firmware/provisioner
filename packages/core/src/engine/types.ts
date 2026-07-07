@@ -19,6 +19,10 @@ interface StepBase {
   id: string;
   /** Short mono label shown in the step rail. */
   rail: string;
+  /** Tier-1 rail group label. Consecutive steps sharing a `group` render in the
+   *  rail as indented sub-steps under one header. Presentation-only: the runner's
+   *  flat index, next/back, and the footer's step count are unaffected. */
+  group?: string;
   /** Heading in the content region. */
   title: string;
   /** Body copy (plain/markdown); the UI renders it. */

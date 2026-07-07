@@ -12,6 +12,7 @@
 // writes them); a field left blank is omitted from the blob and left as-is on the
 // device. With no input at all this writes a valid no-op blob.
 import type { Flow, FlowContext } from "../engine/types";
+import { settingsSteps } from "./settings";
 import {
   CONFIG_PARTITION,
   buildConfigBlob,
@@ -117,16 +118,7 @@ export function configureFlow(opts: TableSpec | ConfigureOptions = {}): Flow {
     title: "Configure",
     summary: "Push settings to an already-installed device.",
     steps: [
-      {
-        id: "settings",
-        type: "confirm",
-        rail: "Settings",
-        title: "Choose what to apply",
-        body:
-          "Push settings to a device already running Linux — set the values you want to change; " +
-          "anything left blank is kept as-is. The device applies them on its next boot.",
-        confirmLabel: "Continue",
-      },
+      ...settingsSteps("Settings", "reconfigure"),
       {
         id: "apply",
         type: "action",
