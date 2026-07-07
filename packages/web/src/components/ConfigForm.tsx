@@ -1,74 +1,44 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-// ConfigForm — the operator-input UI for the settings sub-steps (Device / Network
-// / Access — one section per `settings-*` step, so each page fits the window).
-// Self-contained, the same way NativeSerialPicker is: it calls useWizard() (to dim
-// while busy) and writes the operator's values into the shared config draft in
-// @provisioner/core. The flow's apply step reads that draft and builds the blob —
-// so this component never touches a transport and the flow never imports React.
-// Blank fields are left as-is on the device.
+// ConfigForm — renders a step's form schema (StepForm: fields + optional note).
+// Fully generic: the fields come from the step (device profiles compose them in
+// core — see core/src/flow/settings.ts), so new devices and new settings pages
+// never touch this component. Self-contained, the same way NativeSerialPicker
+// is: it calls useWizard() (to dim while busy) and writes the operator's values
+// into the shared config draft in @provisioner/core. The flow's apply step reads
+// that draft and builds the blob — so this component never touches a transport
+// and the flow never imports React. Blank fields are left as-is on the device.
 //
-// To show it, render the section matching the step id from StepContent:
-//     import { ConfigForm } from "./ConfigForm";
-//     {step.id === "settings-device" && <ConfigForm section="device" />}
+// To show it, render the current confirm step's form from StepContent:
+//     {step.form && <ConfigForm key={step.id} form={step.form} />}
 import * as React from "react";
-import { configStore, type ConfigFields, type ConfigKey } from "@provisioner/core";
+import { configStore, type ConfigFields, type StepForm } from "@provisioner/core";
 import { useWizard } from "@/lib/wizard";
 import { Input } from "@/components/ui/input";
 import { Caption } from "@/components/ui/caption";
 
-interface FieldDef {
-  key: ConfigKey;
-  label: string;
-  placeholder: string;
-  type?: "text" | "password";
-}
-
-export type ConfigSection = "device" | "network" | "access";
-
-// A minimal, common subset of the v1 keys (full schema: CONFIG-PARTITION.md),
-// sectioned to match the three settings sub-steps.
-const SECTIONS: Record<ConfigSection, FieldDef[]> = {
-  device: [
-    { key: "DEVICE_NAME", label: "Device name", placeholder: "lobby-east" },
-    { key: "KIOSK_URL", label: "Kiosk URL", placeholder: "https://dash.local" },
-    { key: "TIMEZONE", label: "Time zone", placeholder: "America/New_York" },
-    { key: "NTP_SERVER", label: "NTP server", placeholder: "192.168.1.1" },
-  ],
-  network: [
-    { key: "WIFI_SSID", label: "Wi-Fi SSID", placeholder: "Corp-Guest" },
-    { key: "WIFI_PASSWORD", label: "Wi-Fi password", placeholder: "leave blank for open Wi-Fi or to keep current", type: "password" },
-    { key: "WIFI_COUNTRY", label: "Wi-Fi country", placeholder: "US" },
-  ],
-  access: [
-    { key: "ROOT_PASSWORD", label: "Root password", placeholder: "leave blank to keep current", type: "password" },
-    { key: "SSH_AUTHKEY", label: "SSH public key", placeholder: "ssh-ed25519 AAAA…" },
-  ],
-};
-
-export function ConfigForm({ section }: { section: ConfigSection }) {
+export function ConfigForm({ form }: { form: StepForm }) {
   const { busy } = useWizard();
-  const fields = SECTIONS[section];
   // Seed from the shared draft so values survive stepping back and forth.
   const [vals, setVals] = React.useState<Record<string, string>>(() => {
-    const snap = configStore.snapshot();
+    const snap = configStore.snapshot() as Record<string, string | undefined>;
     const init: Record<string, string> = {};
-    for (const f of fields) init[f.key] = snap[f.key] ?? "";
+    for (const f of form.fields) init[f.key] = snap[f.key] ?? "";
     return init;
   });
 
-  const update = (key: ConfigKey, value: string) => {
+  const update = (key: string, value: string) => {
     setVals((v) => ({ ...v, [key]: value }));
     configStore.set({ [key]: value } as ConfigFields);
   };
 
   return (
     <div className="mt-6 flex flex-col gap-4">
-      {fields.map((f) => (
+      {form.fields.map((f) => (
         <label key={f.key} className="flex flex-col gap-1">
           <Caption>{f.label}</Caption>
           <Input
-            type={f.type ?? "text"}
+            type={f.secret ? "password" : "text"}
             value={vals[f.key] ?? ""}
             placeholder={f.placeholder}
             disabled={busy}
@@ -78,12 +48,7 @@ export function ConfigForm({ section }: { section: ConfigSection }) {
           />
         </label>
       ))}
-      {section === "access" && (
-        <p className="text-[12px] text-muted">
-          Fields left blank stay as they are on the device. Values are stored in plain text on the
-          device — see CONFIG-PARTITION.md.
-        </p>
-      )}
+      {form.note && <p className="text-[12px] text-muted">{form.note}</p>}
     </div>
   );
 }

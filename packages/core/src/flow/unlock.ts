@@ -8,6 +8,7 @@
 import { sleep } from "../transport/transport";
 import type { Flow, FlowContext } from "../engine/types";
 import { osInstallSteps, setupSteps } from "./reinstall-linux";
+import { ACCESS_SETTINGS, DEVICE_SETTINGS } from "./settings";
 
 // --- geometry (option-A layout, identical to tc8_enroll.py / enroll.js) -------
 const BOOTB_LBA = 0x20000; // boot_b start (disposable transfer slot, user area)
@@ -122,7 +123,7 @@ export function unlockFlow(): Flow {
     summary: "Unlock a fresh device and install Linux — one-time, needs serial.",
     steps: [
       // The TC8 is PoE/ethernet-only — no Wi-Fi radio, so no Network page (for now).
-      ...setupSteps(["device", "access"]),
+      ...setupSteps([DEVICE_SETTINGS, ACCESS_SETTINGS]),
       {
         id: "disassembly",
         type: "info",

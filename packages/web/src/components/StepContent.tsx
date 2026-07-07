@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Slideshow } from "./Slideshow";
 import { NativeSerialPicker } from "./NativeSerialPicker";
 import { NativeUsbPicker } from "./NativeUsbPicker";
-import { ConfigForm, type ConfigSection } from "./ConfigForm";
+import { ConfigForm } from "./ConfigForm";
 import { OsChooser } from "./OsChooser";
 import { Caption } from "@/components/ui/caption";
 import { isTauri } from "@/native/backend";
@@ -78,9 +78,7 @@ export function StepContent() {
 
       {step.id === "choose-os" && <OsChooser />}
 
-      {step.id.startsWith("settings-") && (
-        <ConfigForm key={step.id} section={step.id.slice("settings-".length) as ConfigSection} />
-      )}
+      {step.type === "confirm" && step.form && <ConfigForm key={step.id} form={step.form} />}
 
       {step.gallery && step.gallery.length > 0 && (
         <Slideshow images={step.gallery} className="mt-6" />

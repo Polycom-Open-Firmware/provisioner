@@ -13,6 +13,7 @@ import type { Device } from "../engine/types";
 import { unlockFlow } from "../flow/unlock";
 import { reinstallLinuxFlow } from "../flow/reinstall-linux";
 import { configureFlow } from "../flow/configure";
+import { ACCESS_SETTINGS, DEVICE_SETTINGS } from "../flow/settings";
 
 /** Browser USB filters that match the TC8 in fastboot mode (stage-2 + stock). */
 export const TC8_FILTERS: UsbFilter[] = [
@@ -46,7 +47,7 @@ export function tc8Profile(): Device {
       unlockFlow(),
       reinstallLinuxFlow(),
       // No Wi-Fi radio on the TC8 — skip the Network settings page (for now).
-      configureFlow({ sections: ["device", "access"] }),
+      configureFlow({ sections: [DEVICE_SETTINGS, ACCESS_SETTINGS] }),
     ],
   };
 }

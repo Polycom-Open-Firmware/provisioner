@@ -32,8 +32,16 @@ export type { RunnerOptions } from "./engine/runner";
 
 // Flows
 export { unlockFlow } from "./flow/unlock";
-export { reinstallLinuxFlow, osInstallSteps } from "./flow/reinstall-linux";
+export { reinstallLinuxFlow, osInstallSteps, setupSteps } from "./flow/reinstall-linux";
 export { configureFlow } from "./flow/configure";
+export {
+  settingsSteps,
+  DEVICE_SETTINGS,
+  NETWORK_SETTINGS,
+  ACCESS_SETTINGS,
+  STANDARD_SETTINGS,
+} from "./flow/settings";
+export type { SettingsIntent, SettingsSection } from "./flow/settings";
 
 // Config (the autoconfigure `cache` blob — see tc8-firmware-build/CONFIG-PARTITION.md)
 export {

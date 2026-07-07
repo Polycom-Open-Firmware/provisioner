@@ -38,6 +38,24 @@ export interface InfoStep extends StepBase {
   type: "info";
 }
 
+/** One operator-input field on a confirm step's form. `key` is the config-draft
+ *  key the UI writes the value to (the device contract's KEY=value name). */
+export interface FormField {
+  key: string;
+  label: string;
+  placeholder?: string;
+  /** Render as a password-style input. */
+  secret?: boolean;
+}
+
+/** A confirm step's operator-input form. Pure data — the UI shell renders it
+ *  generically, so device profiles compose forms without any UI change. */
+export interface StepForm {
+  fields: FormField[];
+  /** Fine-print line under the fields. */
+  note?: string;
+}
+
 export interface ConfirmStep extends StepBase {
   type: "confirm";
   /** Custom primary-button label (design notes: confirm steps set their own). */
@@ -47,6 +65,8 @@ export interface ConfirmStep extends StepBase {
   /** For a `connect-hid` gesture: which HID device to request (each SDP stage
    *  targets a different one — BootROM then the SPL gadget). */
   hidFilters?: HidFilter[];
+  /** Operator-input form rendered on this step (e.g. the settings pages). */
+  form?: StepForm;
 }
 
 /** Confirmation gate for a destructive action. The UI shell must show a blocking
