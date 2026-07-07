@@ -3,11 +3,13 @@
 // blob.ts — build the TC8 autoconfigure "cache" config blob, and hold the
 // operator's draft so the UI and the flow share one source of truth.
 //
-// Contract: tc8-firmware-build/CONFIG-PARTITION.md. The wizard writes this blob to
+// Contract: poly-firmware-build/CONFIG-PARTITION.md. The wizard writes this blob to
 // the START of the stock `cache` GPT partition over fastboot (`flash cache`); the
 // on-device reader (rootfs/etc/tc8-config/apply-config.sh, a oneshot before the
-// kiosk) validates magic + sha256 and applies the `KEY=value` lines every boot
-// (idempotent). No bootloader change, not AVB-verified. A fresh/empty `cache` or a
+// kiosk) validates magic + sha256 and applies the `KEY=value` lines ONCE per
+// unique blob (sha-gated; a re-provision writes a new blob → re-applies; in
+// sealed mode the applied /etc is persisted + restored). No bootloader change,
+// not AVB-verified. A fresh/empty `cache` or a
 // corrupt/half-written blob is ignored, so the device keeps its current config.
 //
 // Blob layout (little-endian); the header is 64 bytes:
@@ -63,7 +65,7 @@ export function configFieldsToLines(fields: ConfigFields): string[] {
   // Stamp the FLASH time (epoch seconds) so an offline device with no NTP
   // still boots with a roughly-right clock. The device applies it
   // forward-only (never clobbers a real/NTP-synced time). Fresher than the
-  // image build date; see tc8-firmware-build/CONFIG-PARTITION.md (CONFIG_TIME).
+  // image build date; see poly-firmware-build/CONFIG-PARTITION.md (CONFIG_TIME).
   lines.push("CONFIG_TIME=" + Math.floor(Date.now() / 1000));
   for (const key of CONFIG_KEYS) {
     const raw = fields[key];
@@ -101,7 +103,7 @@ export function buildConfigBlob(fields: ConfigFields): Promise<Uint8Array> {
 }
 
 // --- bootloader update (rides the same cache write) --------------------------
-// Contract: tc8-firmware-build/CONFIG-PARTITION.md (bootloader-update section).
+// Contract: poly-firmware-build/CONFIG-PARTITION.md (bootloader-update section).
 // The wizard never writes the
 // eMMC boot1 HW partition directly; it stages the stage-2 image in `cache` (at
 // 1 MiB, after the config blob) and the running OS flashes boot1 on the next boot

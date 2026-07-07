@@ -6,7 +6,7 @@
 // so if they're absent the table is gone/corrupt. Restore flashes the canonical
 // GPT from tc8-gpt-restore.simg (RAW primary @ LBA0, DONT_CARE middle so the env +
 // data are preserved, RAW backup at the end) into a runtime-defined whole-disk raw
-// target. See tc8-firmware-build/gpt-restore/.
+// target. See poly-firmware-build/gpt-restore/.
 import type { FlowContext } from "../engine/types";
 
 /** What "an intact table" means for a device, and how to put one back. */

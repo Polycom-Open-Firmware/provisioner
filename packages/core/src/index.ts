@@ -52,7 +52,7 @@ export {
 } from "./flow/applications";
 export type { Application } from "./flow/applications";
 
-// Config (the autoconfigure `cache` blob — see tc8-firmware-build/CONFIG-PARTITION.md)
+// Config (the autoconfigure `cache` blob — see poly-firmware-build/CONFIG-PARTITION.md)
 export {
   buildConfigBlob,
   buildConfigBlobFromLines,

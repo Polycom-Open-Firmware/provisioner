@@ -4,7 +4,7 @@
 // device settings to an already-installed TC8 by writing a small config blob to the
 // stock `cache` GPT partition over fastboot; a boot-time service on the device
 // validates and applies it before the kiosk starts. No bootloader change, not
-// AVB-verified. Contract + the full key schema: tc8-firmware-build/CONFIG-PARTITION.md.
+// AVB-verified. Contract + the full key schema: poly-firmware-build/CONFIG-PARTITION.md.
 //
 // Entry mirrors "Reinstall Linux": the unit is already unlocked, so the operator
 // does the 4-finger gesture to drop it into fastboot, then connects over USB. The

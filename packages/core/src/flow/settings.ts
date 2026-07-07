@@ -24,7 +24,7 @@ export interface SettingsSection {
   form: StepForm;
 }
 
-// --- the standard sections (keys: tc8-firmware-build/CONFIG-PARTITION.md) -----
+// --- the standard sections (keys: poly-firmware-build/CONFIG-PARTITION.md) -----
 // The Application page (the device-role picker) is per-device — built from each
 // device's catalog by applicationSection() in ./applications.ts.
 
