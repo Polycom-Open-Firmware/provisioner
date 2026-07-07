@@ -30,6 +30,7 @@ export const CONFIG_MAX_PAYLOAD = 1 << 20; // 1 MiB
  * ignores unknown keys — but these are the ones that take effect.
  */
 export const CONFIG_KEYS = [
+  "PROFILE",
   "DEVICE_NAME",
   "KIOSK_URL",
   "KIOSK_URL_FALLBACK",

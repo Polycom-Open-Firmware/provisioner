@@ -46,6 +46,10 @@ export interface FormField {
   placeholder?: string;
   /** Render as a password-style input. */
   secret?: boolean;
+  /** When set, render a picker (not a text input): one choice per option, the
+   *  chosen `value` written to `key`. First option is the default. Used for the
+   *  device-role profile (kiosk/dev). */
+  options?: { value: string; label: string }[];
 }
 
 /** A confirm step's operator-input form. Pure data — the UI shell renders it
