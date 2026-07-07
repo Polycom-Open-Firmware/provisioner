@@ -14,7 +14,7 @@
 // After boot the C60 runs the same open U-Boot + Android fastboot gadget as the TC8,
 // so Install/Update and Configure are the IDENTICAL flows — reused verbatim.
 import type { UsbFilter } from "../transport/transport";
-import type { Device, Flow, FlowContext } from "../engine/types";
+import type { DangerGate, Device, Flow, FlowContext } from "../engine/types";
 import { SDP_PID_BOOTROM, SDP_PID_SPL, SDP_VID } from "../protocol/sdp";
 import { reinstallLinuxFlow, osInstallSteps, setupSteps } from "../flow/reinstall-linux";
 import { configureFlow } from "../flow/configure";
@@ -23,6 +23,16 @@ import { configureFlow } from "../flow/configure";
 export const C60_FILTERS: UsbFilter[] = [
   { vendorId: 0x1fc9, productId: 0x0152 },
 ];
+
+/** The C60 install overwrites slot A (system_a), not userdata — the default TC8
+ *  "WIPE userdata" warning would be wrong here. */
+const C60_INSTALL_DANGER: DangerGate = {
+  title: "Replace the installed OS?",
+  message:
+    "This will REPLACE the operating system installed on this device (system slot A). " +
+    "User data on other partitions is not touched.",
+  confirmLabel: "Replace OS",
+};
 
 /** Fetch our U-Boot (`flash.bin`) once per run — loaded into RAM over SDP. */
 async function getFlash(ctx: FlowContext, cache: { bin: Uint8Array | null }): Promise<Uint8Array> {
@@ -95,6 +105,7 @@ export function c60UnlockFlow(): Flow {
         {
           connectImage: "/c60/usb-connect.svg",
           install: { replaceBootloader: true },
+          danger: C60_INSTALL_DANGER,
           doneBody:
             "The device is rebooting into Debian. If the BOOT_MODE switches are still in the " +
             "recovery position, flip them back and power-cycle — in recovery position the device " +
@@ -123,6 +134,7 @@ export function c60Profile(): Device {
         {
           connectImage: "/c60/usb-connect.svg",
           install: { replaceBootloader: true },
+          danger: C60_INSTALL_DANGER,
           doneBody:
             "The device is rebooting into Debian. If the BOOT_MODE switches are still in the " +
             "recovery position, flip them back and power-cycle — in recovery position the device " +

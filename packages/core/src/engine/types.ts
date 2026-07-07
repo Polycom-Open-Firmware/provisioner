@@ -49,12 +49,27 @@ export interface ConfirmStep extends StepBase {
   hidFilters?: HidFilter[];
 }
 
+/** Confirmation gate for a destructive action. The UI shell must show a blocking
+ *  modal (Confirm/Cancel over a dimmed backdrop) BEFORE performing the step's
+ *  gesture/run. Data only — the dialog component lives in the UI package. Only
+ *  honored on gesture actions (every destructive step today is one). */
+export interface DangerGate {
+  title: string;
+  message: string;
+  /** Confirm-button label (default "Continue"). */
+  confirmLabel?: string;
+}
+
 export interface ActionStep extends StepBase {
   type: "action";
   /** Streams to the console; drives the progress bar. Auto-runs on entry UNLESS
    *  `gesture` is set, in which case it waits for its start button (which performs
    *  the device pick, then runs — merging the old connect-step + action pair). */
   run: (ctx: FlowContext) => Promise<void>;
+  /** If set, the UI interposes a blocking confirm modal before the start button's
+   *  device pick / run. For irreversible operations (wiping userdata, replacing
+   *  the installed OS). */
+  danger?: DangerGate;
   /** If set, don't auto-run: show a start button that does this gesture (the device
    *  pick, which must originate from a user click) and then runs. */
   gesture?: Gesture;

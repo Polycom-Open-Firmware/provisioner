@@ -14,6 +14,8 @@ import {
   WizardRunner,
   tc8Profile,
   c60Profile,
+  type ActionStep,
+  type DangerGate,
   type Device,
   type Flow,
   type Step,
@@ -44,6 +46,9 @@ interface WizardState {
   awaitingStart: boolean;
   /** The OS build picked on the Setup/Choose-OS screen (for highlighting). */
   selectedOs: OsBuild | null;
+  /** A danger-gated start awaiting modal confirmation. `proceed` re-runs the
+   *  original intent (device pick + run) inside the Confirm click's user gesture. */
+  pendingDanger: { gate: DangerGate; proceed: () => void | Promise<void> } | null;
 }
 
 export interface WizardApi extends WizardState {
@@ -64,6 +69,10 @@ export interface WizardApi extends WizardState {
   /** Pick which OS build to flash; swaps the artifact source (does NOT advance —
    *  the Setup screen's Continue button does). */
   selectOs: (build: OsBuild) => void;
+  /** Run the danger-gated start that's awaiting confirmation (modal Confirm). */
+  confirmDanger: () => void;
+  /** Dismiss the danger modal without running anything (modal Cancel). */
+  cancelDanger: () => void;
 }
 
 const initial: WizardState = {
@@ -78,6 +87,7 @@ const initial: WizardState = {
   error: null,
   awaitingStart: false,
   selectedOs: null,
+  pendingDanger: null,
 };
 
 function reduce(s: WizardState, e: EngineEvent): WizardState {
@@ -85,7 +95,7 @@ function reduce(s: WizardState, e: EngineEvent): WizardState {
     case "flow:start":
       return { ...s, stepIndex: 0, progress: null, error: null, awaitingStart: false };
     case "step:enter":
-      return { ...s, stepIndex: e.index, progress: null, awaitingStart: false };
+      return { ...s, stepIndex: e.index, progress: null, awaitingStart: false, pendingDanger: null };
     case "action:await":
       return { ...s, awaitingStart: true };
     case "action:start":
@@ -138,7 +148,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
   const pickFlow = (f: Flow) => {
     if (f.soon) return;
     if (f.nativeOnly && platform === "web") return; // greyed in the picker; refuse to start
-    setState((s) => ({ ...s, flow: f, phase: "in-flow", stepIndex: 0, lines: [], progress: null, error: null }));
+    setState((s) => ({ ...s, flow: f, phase: "in-flow", stepIndex: 0, lines: [], progress: null, error: null, pendingDanger: null }));
     runner.start(f);
   };
 
@@ -164,7 +174,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const connectUsbDevice = async (dev: { vendorId: number; productId: number; serial?: string }) => {
+  const doConnectUsbDevice = async (dev: { vendorId: number; productId: number; serial?: string }) => {
     setState((x) => ({ ...x, busy: true, error: null }));
     try {
       await runner.attachUsb([{ vendorId: dev.vendorId, productId: dev.productId }], dev.serial);
@@ -174,6 +184,19 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setState((x) => ({ ...x, busy: false }));
     }
+  };
+
+  // The native USB picker bypasses primary(), so the danger gate lives here too.
+  const connectUsbDevice = async (dev: { vendorId: number; productId: number; serial?: string }) => {
+    const step = stateRef.current.flow?.steps[stateRef.current.stepIndex];
+    if (step?.type === "action" && step.danger) {
+      setState((x) => ({
+        ...x,
+        pendingDanger: { gate: step.danger!, proceed: () => doConnectUsbDevice(dev) },
+      }));
+      return;
+    }
+    return doConnectUsbDevice(dev);
   };
 
   const selectOs = (build: OsBuild) => {
@@ -190,8 +213,25 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     if (s.phase === "in-flow") {
+      setState((x) => ({ ...x, pendingDanger: null }));
       if (s.stepIndex > 0) runner.back();
       else setState((x) => ({ ...x, phase: "pick-flow", flow: null, error: null }));
+    }
+  };
+
+  // The gesture-action start: device pick (must stay inside a real user click —
+  // the primary button's, or the danger modal's Confirm), then run.
+  const startGestureAction = async (step: ActionStep) => {
+    setState((x) => ({ ...x, busy: true, error: null }));
+    try {
+      if (step.gesture === "connect-usb") await runner.attachUsb(stateRef.current.device?.filters);
+      else if (step.gesture === "connect-serial") await runner.attachSerial();
+      else await runner.attachHid(step.hidFilters ?? [{ vendorId: 0x1fc9 }]);
+      runner.runCurrentAction();
+    } catch (err) {
+      setState((x) => ({ ...x, error: (err as Error).message }));
+    } finally {
+      setState((x) => ({ ...x, busy: false }));
     }
   };
 
@@ -205,25 +245,34 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
 
     // A gesture action: its "Connect & …" button does the device pick (in this
     // user gesture) then starts the run. A plain action has no primary button.
+    // A danger-gated action interposes the confirm modal first; the modal's
+    // Confirm click supplies the user gesture the device pick needs.
     if (step.type === "action") {
       if (!step.gesture) return;
-      setState((x) => ({ ...x, busy: true, error: null }));
-      try {
-        if (step.gesture === "connect-usb") await runner.attachUsb(s.device?.filters);
-        else if (step.gesture === "connect-serial") await runner.attachSerial();
-        else await runner.attachHid(step.hidFilters ?? [{ vendorId: 0x1fc9 }]);
-        runner.runCurrentAction();
-      } catch (err) {
-        setState((x) => ({ ...x, error: (err as Error).message }));
-      } finally {
-        setState((x) => ({ ...x, busy: false }));
+      if (step.danger) {
+        setState((x) => ({
+          ...x,
+          pendingDanger: { gate: step.danger!, proceed: () => startGestureAction(step) },
+        }));
+        return;
       }
-      return;
+      return startGestureAction(step);
     }
 
     // confirm — advances (Setup/Settings/Choose-OS). No gestures live here anymore.
     runner.confirm();
   };
+
+  // Synchronous handoff (no await before proceed): the device pick inside
+  // proceed() must run within the Confirm click's user gesture.
+  const confirmDanger = () => {
+    const pending = stateRef.current.pendingDanger;
+    if (!pending) return;
+    setState((x) => ({ ...x, pendingDanger: null }));
+    void pending.proceed();
+  };
+
+  const cancelDanger = () => setState((x) => ({ ...x, pendingDanger: null }));
 
   const currentStep: Step | null = state.flow ? state.flow.steps[state.stepIndex] ?? null : null;
 
@@ -241,6 +290,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     connectSerialPort,
     connectUsbDevice,
     selectOs,
+    confirmDanger,
+    cancelDanger,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

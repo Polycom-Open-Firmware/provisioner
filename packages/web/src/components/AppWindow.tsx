@@ -8,6 +8,7 @@ import { useWizard } from "@/lib/wizard";
 import { isTauri } from "@/native/backend";
 import { Titlebar } from "./Titlebar";
 import { Console } from "./Console";
+import { DangerDialog } from "./DangerDialog";
 import { DevicePicker } from "./DevicePicker";
 import { FlowPicker } from "./FlowPicker";
 import { FlowView } from "./FlowView";
@@ -28,21 +29,25 @@ function WizardBody() {
 }
 
 export function AppWindow() {
-  // Native: fill the real OS window, no fake chrome.
+  // Native: fill the real OS window, no fake chrome. `relative` so the danger
+  // modal's absolute overlay covers the whole window.
   if (isTauri()) {
     return (
-      <div className="flex h-screen w-full flex-col bg-background">
+      <div className="relative flex h-screen w-full flex-col bg-background">
         <WizardBody />
+        <DangerDialog />
       </div>
     );
   }
 
-  // Web: float the app window on a dotted backdrop, capped + framed.
+  // Web: float the app window on a dotted backdrop, capped + framed. `relative`
+  // + overflow-hidden clip the danger overlay to the rounded frame.
   return (
     <div className="backdrop-dots flex min-h-screen w-full items-center justify-center p-4 sm:p-8">
-      <div className="flex h-[min(82vh,760px)] w-full max-w-[1120px] flex-col overflow-hidden rounded-[12px] border border-[#d4cdc1] bg-background shadow-window">
+      <div className="relative flex h-[min(82vh,760px)] w-full max-w-[1120px] flex-col overflow-hidden rounded-[12px] border border-[#d4cdc1] bg-background shadow-window">
         <Titlebar />
         <WizardBody />
+        <DangerDialog />
       </div>
     </div>
   );

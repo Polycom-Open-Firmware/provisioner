@@ -7,7 +7,7 @@
 // rootfs target (`userdata` on TC8, `system_a` on C60) — via the Android
 // sparse protocol, sets the active slot, and reboots.
 import { flashSparse, parseSparse, planResparse } from "../protocol/sparse";
-import type { Flow, FlowContext, Step } from "../engine/types";
+import type { DangerGate, Flow, FlowContext, Step } from "../engine/types";
 import {
   CONFIG_PARTITION,
   buildConfigBlob,
@@ -198,7 +198,13 @@ async function runFlash(ctx: FlowContext, opts: InstallOptions = {}): Promise<vo
 export function osInstallSteps(
   idPrefix = "os",
   connectBody?: string,
-  opts?: { connectImage?: string; doneBody?: string; doneImage?: string; install?: InstallOptions },
+  opts?: {
+    connectImage?: string;
+    doneBody?: string;
+    doneImage?: string;
+    install?: InstallOptions;
+    danger?: DangerGate;
+  },
 ): Step[] {
   return [
     {
@@ -212,6 +218,14 @@ export function osInstallSteps(
       image: opts?.connectImage,
       gesture: "connect-usb",
       confirmLabel: "Connect & install",
+      // Default copy matches the TC8 install, whose rootfs target IS userdata.
+      danger: opts?.danger ?? {
+        title: "Erase and install?",
+        message:
+          "This will WIPE all user data on the device and replace its operating system. " +
+          "This cannot be undone.",
+        confirmLabel: "Wipe & install",
+      },
       run: (ctx) => runFlash(ctx, opts?.install),
     },
     {
@@ -247,7 +261,13 @@ export function setupSteps(): Step[] {
 
 export function reinstallLinuxFlow(
   connectBody?: string,
-  opts?: { connectImage?: string; doneBody?: string; doneImage?: string; install?: InstallOptions },
+  opts?: {
+    connectImage?: string;
+    doneBody?: string;
+    doneImage?: string;
+    install?: InstallOptions;
+    danger?: DangerGate;
+  },
 ): Flow {
   return {
     id: "reinstall-linux",
