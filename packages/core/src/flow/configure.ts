@@ -31,6 +31,11 @@ interface ConfigureOptions {
   rawConfig?: RawPartitionSpec;
   /** Which settings pages the device has (default: all). */
   sections?: SettingsSection[];
+  /** Device-specific fastboot-entry copy for the apply step (default: TC8's
+   *  submarine-logo four-finger gesture). */
+  connectBody?: string;
+  /** Device-specific illustration for the apply step. */
+  connectImage?: string;
 }
 
 const C60_FASTBOOT_BUF_ADDR = 0x42800000;
@@ -127,8 +132,10 @@ export function configureFlow(opts: TableSpec | ConfigureOptions = {}): Flow {
         rail: "Apply config",
         title: "Apply configuration",
         body:
+          options.connectBody ??
           "When you see the submarine logo, touch the screen with four fingers to enter fastboot. " +
-          "Then connect the device over USB and choose it from the list to apply the settings.",
+            "Then connect the device over USB and choose it from the list to apply the settings.",
+        image: options.connectImage,
         gesture: "connect-usb",
         confirmLabel: "Connect & apply",
         run: (ctx) => runApply(ctx, options),
