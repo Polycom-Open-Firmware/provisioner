@@ -15,7 +15,7 @@ import {
   configStore,
 } from "../config/blob";
 import { TC8_TABLE, ensurePartitionTable } from "./partitions";
-import { settingsSteps } from "./settings";
+import { settingsSteps, type SettingsSection } from "./settings";
 
 const SLOT = "a"; // "replace stock": overwrite boot_a/dtbo_a/vbmeta_a + the rootfs
 
@@ -252,11 +252,12 @@ export function chooseOsStep(): Step {
 }
 
 /** The grouped Setup block for flows that install AND configure: the OS pick plus
- *  the three settings sub-steps, all under one "Setup" rail group. Replaces the
- *  old single combined "setup" page, which stacked the catalog and all nine config
- *  fields past the bottom of the window. */
-export function setupSteps(): Step[] {
-  return [{ ...chooseOsStep(), group: "Setup" }, ...settingsSteps("Setup", "first-boot")];
+ *  the settings sub-steps, all under one "Setup" rail group. Replaces the old
+ *  single combined "setup" page, which stacked the catalog and all nine config
+ *  fields past the bottom of the window. `sections` picks the settings pages the
+ *  device actually has (default: all). */
+export function setupSteps(sections?: SettingsSection[]): Step[] {
+  return [{ ...chooseOsStep(), group: "Setup" }, ...settingsSteps("Setup", "first-boot", sections)];
 }
 
 export function reinstallLinuxFlow(

@@ -12,7 +12,7 @@
 // writes them); a field left blank is omitted from the blob and left as-is on the
 // device. With no input at all this writes a valid no-op blob.
 import type { Flow, FlowContext } from "../engine/types";
-import { settingsSteps } from "./settings";
+import { settingsSteps, type SettingsSection } from "./settings";
 import {
   CONFIG_PARTITION,
   buildConfigBlob,
@@ -29,6 +29,8 @@ interface RawPartitionSpec {
 interface ConfigureOptions {
   table?: TableSpec;
   rawConfig?: RawPartitionSpec;
+  /** Which settings pages the device has (default: all). */
+  sections?: SettingsSection[];
 }
 
 const C60_FASTBOOT_BUF_ADDR = 0x42800000;
@@ -118,7 +120,7 @@ export function configureFlow(opts: TableSpec | ConfigureOptions = {}): Flow {
     title: "Configure",
     summary: "Push settings to an already-installed device.",
     steps: [
-      ...settingsSteps("Settings", "reconfigure"),
+      ...settingsSteps("Settings", "reconfigure", options.sections),
       {
         id: "apply",
         type: "action",

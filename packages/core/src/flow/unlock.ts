@@ -121,7 +121,8 @@ export function unlockFlow(): Flow {
     title: "Unlock and Install",
     summary: "Unlock a fresh device and install Linux — one-time, needs serial.",
     steps: [
-      ...setupSteps(),
+      // The TC8 is PoE/ethernet-only — no Wi-Fi radio, so no Network page (for now).
+      ...setupSteps(["device", "access"]),
       {
         id: "disassembly",
         type: "info",

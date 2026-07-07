@@ -45,7 +45,8 @@ export function tc8Profile(): Device {
     flows: [
       unlockFlow(),
       reinstallLinuxFlow(),
-      configureFlow(),
+      // No Wi-Fi radio on the TC8 — skip the Network settings page (for now).
+      configureFlow({ sections: ["device", "access"] }),
     ],
   };
 }
