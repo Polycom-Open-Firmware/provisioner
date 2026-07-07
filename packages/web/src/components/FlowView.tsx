@@ -14,6 +14,8 @@ export function FlowView() {
     <div className="flex min-h-0 flex-1">
       <StepRail />
       <div className="flex min-h-0 flex-1 flex-col">
+        {/* overflow-auto is a FAILSAFE (resizable native windows, error banners) —
+            steps are sized to fit the frame; a scrollbar at design size is a bug. */}
         <div className="min-h-0 flex-1 overflow-auto">
           <StepContent />
         </div>

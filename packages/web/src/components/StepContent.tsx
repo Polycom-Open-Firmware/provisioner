@@ -64,7 +64,7 @@ export function StepContent() {
   const showConnectUi = step.type === "confirm" || (step.type === "action" && awaitingStart);
 
   return (
-    <div className="mx-auto max-w-2xl p-10">
+    <div className="mx-auto max-w-2xl px-10 py-7">
       {step.type === "done" ? (
         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary-tint">
           <Check className="h-6 w-6 text-primary" />
