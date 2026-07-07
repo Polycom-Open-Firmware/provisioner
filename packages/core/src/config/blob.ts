@@ -59,6 +59,11 @@ export type ConfigFields = Partial<Record<ConfigKey, string>>;
  */
 export function configFieldsToLines(fields: ConfigFields): string[] {
   const lines = ["# tc8 autoconfigure v1 (written by the provisioner)"];
+  // Stamp the FLASH time (epoch seconds) so an offline device with no NTP
+  // still boots with a roughly-right clock. The device applies it
+  // forward-only (never clobbers a real/NTP-synced time). Fresher than the
+  // image build date; see tc8-firmware-build/CONFIG-PARTITION.md (CONFIG_TIME).
+  lines.push("CONFIG_TIME=" + Math.floor(Date.now() / 1000));
   for (const key of CONFIG_KEYS) {
     const raw = fields[key];
     if (raw == null || raw.trim() === "") continue;
