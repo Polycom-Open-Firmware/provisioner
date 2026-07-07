@@ -31,7 +31,7 @@ export type ConfigSection = "device" | "network" | "access";
 const SECTIONS: Record<ConfigSection, FieldDef[]> = {
   device: [
     { key: "DEVICE_NAME", label: "Device name", placeholder: "lobby-east" },
-    { key: "KIOSK_URL", label: "Kiosk URL", placeholder: "https://dash.local  or  rtsp://…" },
+    { key: "KIOSK_URL", label: "Kiosk URL", placeholder: "https://dash.local" },
     { key: "TIMEZONE", label: "Time zone", placeholder: "America/New_York" },
     { key: "NTP_SERVER", label: "NTP server", placeholder: "192.168.1.1" },
   ],
