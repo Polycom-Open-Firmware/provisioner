@@ -5,11 +5,12 @@
 //
 // Contract: poly-firmware-build/CONFIG-PARTITION.md. The wizard writes this blob to
 // the START of the stock `cache` GPT partition over fastboot (`flash cache`); the
-// on-device reader (rootfs/etc/tc8-config/apply-config.sh, a oneshot before the
-// kiosk) validates magic + sha256 and applies the `KEY=value` lines ONCE per
-// unique blob (sha-gated; a re-provision writes a new blob → re-applies; in
-// sealed mode the applied /etc is persisted + restored). No bootloader change,
-// not AVB-verified. A fresh/empty `cache` or a
+// on-device reader validates magic + sha256, applies the `KEY=value` lines,
+// and then CONSUMES the blob (zeroes its header) — the blob is a one-shot
+// message, not a store; device state lives in the filesystem. On sealed
+// (overlay) boots the initramfs applies it to the real rootfs pre-seal; the
+// runtime tc8-config service covers direct-rw boots and no-initramfs targets.
+// No bootloader change, not AVB-verified. A fresh/empty `cache` or a
 // corrupt/half-written blob is ignored, so the device keeps its current config.
 //
 // Blob layout (little-endian); the header is 64 bytes:
