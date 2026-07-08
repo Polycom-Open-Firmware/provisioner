@@ -11,7 +11,7 @@ devices that the browser cannot reach.
 
 This is the app, not the project landing page. Device-side firmware decisions
 live in the
-[firmware repo](https://github.com/Polycom-Open-Firmware/tc8-firmware-build);
+[firmware repo](https://github.com/Polycom-Open-Firmware/poly-firmware-build);
 this doc owns the host application.
 
 ---
