@@ -19,7 +19,7 @@ import { SDP_PID_BOOTROM, SDP_PID_SPL, SDP_VID } from "../protocol/sdp";
 import { osInstallSteps, setupSteps } from "../flow/reinstall-linux";
 import { configureFlow } from "../flow/configure";
 import { ACCESS_SETTINGS, DEVICE_SETTINGS, NETWORK_SETTINGS } from "../flow/settings";
-import { applicationSection, C60_APPLICATIONS } from "../flow/applications";
+import { applicationSection, applicationsFor } from "../flow/applications";
 
 /** The C60 U-Boot fastboot gadget (post-boot), for the Install/Configure choosers. */
 export const C60_FILTERS: UsbFilter[] = [
@@ -174,7 +174,7 @@ export function c60Profile(): Device {
         // C60 menu: kiosk (shared) + smart speaker (C60 mic array) + dev. C60
         // has a Wi-Fi radio, so it keeps the Network page.
         sections: [
-          applicationSection(C60_APPLICATIONS),
+          applicationSection(applicationsFor("c60")),
           DEVICE_SETTINGS,
           NETWORK_SETTINGS,
           ACCESS_SETTINGS,

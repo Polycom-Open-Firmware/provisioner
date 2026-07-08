@@ -56,6 +56,11 @@ export interface FormField {
     label: string;
     description?: string;
     icon?: string;
+    /** Backing package name — lets the UI decorate the tile with the
+     *  archive's published (= latest) version. */
+    pkg?: string;
+    /** Small muted line on the tile (e.g. "v0.2.0"). */
+    badge?: string;
     fields?: FormField[];
   }[];
 }

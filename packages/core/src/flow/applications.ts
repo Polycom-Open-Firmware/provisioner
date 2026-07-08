@@ -23,6 +23,12 @@ export interface Application {
   description: string;
   /** Tile glyph (emoji — renders everywhere, ships no asset). */
   icon: string;
+  /** The metapackage backing this application (poly-app-<id>); the archive's
+   *  published version of it is what the tile's version badge shows. */
+  pkg?: string;
+  /** Boards this application runs on; absent = board-agnostic (all boards).
+   *  Only applications that touch board-specific hardware set this. */
+  boards?: string[];
   /** The app's own settings, shown when it is selected. */
   fields?: FormField[];
 }
@@ -34,6 +40,7 @@ export const APP_KIOSK: Application = {
   label: "Kiosk",
   description: "Locked fullscreen browser.",
   icon: "🖥️",
+  pkg: "poly-app-kiosk",
   fields: [
     { key: "KIOSK_URL", label: "Kiosk URL", placeholder: "https://dash.local" },
     { key: "KIOSK_URL_FALLBACK", label: "Fallback URL", placeholder: "shown if the kiosk URL is unreachable" },
@@ -65,14 +72,20 @@ export const APP_SMART_SPEAKER: Application = {
   label: "Smart speaker",
   description: "Voice assistant on the mic array.",
   icon: "🔊",
+  boards: ["c60"],
 };
 
-// --- per-device catalogs -----------------------------------------------------
-// Order = menu order; the first entry is the default selection.
+// --- the catalog -------------------------------------------------------------
+// ONE master list; a device's menu is the board-agnostic apps plus the ones
+// restricted to that board. Order = menu order; first entry = default.
 
-export const TC8_APPLICATIONS: Application[] = [APP_KIOSK, APP_NONE];
+export const APPLICATIONS: Application[] = [APP_KIOSK, APP_SMART_SPEAKER, APP_NONE];
 
-export const C60_APPLICATIONS: Application[] = [APP_KIOSK, APP_SMART_SPEAKER, APP_NONE];
+/** The applications offered on a device: everything not restricted to another
+ *  board. */
+export function applicationsFor(deviceId: string): Application[] {
+  return APPLICATIONS.filter((a) => !a.boards || a.boards.includes(deviceId));
+}
 
 // --- section builder ---------------------------------------------------------
 
@@ -94,6 +107,7 @@ export function applicationSection(apps: Application[]): SettingsSection {
             label: a.label,
             description: a.description,
             icon: a.icon,
+            pkg: a.pkg,
             fields: a.fields,
           })),
         },

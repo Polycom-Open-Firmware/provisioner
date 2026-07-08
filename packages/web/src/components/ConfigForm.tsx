@@ -17,6 +17,7 @@ import { configStore, type ConfigFields, type FormField, type StepForm } from "@
 import { useWizard } from "@/lib/wizard";
 import { Input } from "@/components/ui/input";
 import { Caption } from "@/components/ui/caption";
+import { getAppVersions } from "@/app-versions";
 
 function seedDefaults(fields: FormField[], snap: Record<string, string | undefined>, init: Record<string, string>) {
   for (const f of fields) {
@@ -38,6 +39,14 @@ export function ConfigForm({ form }: { form: StepForm }) {
     seedDefaults(form.fields, snap, init);
     return init;
   });
+
+  // Version badges for application tiles (archive's published = latest).
+  const [versions, setVersions] = React.useState<Record<string, string>>({});
+  React.useEffect(() => {
+    let on = true;
+    getAppVersions().then((v) => on && setVersions(v));
+    return () => { on = false; };
+  }, []);
 
   const update = (key: string, value: string) => {
     setVals((v) => ({ ...v, [key]: value }));
@@ -104,6 +113,11 @@ export function ConfigForm({ form }: { form: StepForm }) {
                 <span className="text-sm font-medium">{o.label}</span>
                 {o.description && (
                   <span className="text-[11px] text-muted leading-tight">{o.description}</span>
+                )}
+                {(o.badge ?? (o.pkg && versions[o.pkg] && "v" + versions[o.pkg])) && (
+                  <span className="text-[10px] text-muted/70 leading-none">
+                    {o.badge ?? "v" + versions[o.pkg!]}
+                  </span>
                 )}
               </button>
             );

@@ -47,8 +47,8 @@ export {
   APP_KIOSK,
   APP_NONE,
   APP_SMART_SPEAKER,
-  TC8_APPLICATIONS,
-  C60_APPLICATIONS,
+  APPLICATIONS,
+  applicationsFor,
 } from "./flow/applications";
 export type { Application } from "./flow/applications";
 
