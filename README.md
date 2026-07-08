@@ -1,7 +1,7 @@
 # OpenPolycom Provisioning Wizard
 
 The wizard that unlocks Polycom conference-room hardware and installs
-[open firmware](https://github.com/Polycom-Open-Firmware/tc8-firmware-build)
+[open firmware](https://github.com/Polycom-Open-Firmware/poly-firmware-build)
 on it — live at **[wizard.openpolycom.cc](https://wizard.openpolycom.cc/)**.
 Everything runs in the browser: plug the device into USB, open the page in
 Chrome or Edge, and click through. Nothing to install, no drivers, no
@@ -13,7 +13,7 @@ What it can do:
 - **Install or reinstall** the OS (A/B Android slot images over fastboot)
 - **Configure** devices with no shell — hostname, kiosk page, passwords,
   time zone, certificates
-  ([the contract](https://github.com/Polycom-Open-Firmware/tc8-firmware-build/blob/main/CONFIG-PARTITION.md))
+  ([the contract](https://github.com/Polycom-Open-Firmware/poly-firmware-build/blob/main/CONFIG-PARTITION.md))
 - **Update the bootloader** in the field, with no serial cable
 
 Supported devices:
@@ -57,7 +57,7 @@ npm run build -w @provisioner/web    # production bundle
 
 The web app needs Chrome or Edge and a secure context (localhost counts).
 Firmware artifacts come from the GitHub releases of
-[tc8-firmware-build](https://github.com/Polycom-Open-Firmware/tc8-firmware-build):
+[poly-firmware-build](https://github.com/Polycom-Open-Firmware/poly-firmware-build):
 in production through the same-origin proxy, in local dev from
 `packages/web/public/artifacts/`. Deploys are automatic — pushing `main`
 rebuilds wizard.openpolycom.cc (see [`CLOUDFLARE.md`](./CLOUDFLARE.md)).
@@ -67,7 +67,7 @@ rebuilds wizard.openpolycom.cc (see [`CLOUDFLARE.md`](./CLOUDFLARE.md)).
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — the layered design: transport seam, protocols, flows, device profiles
 - [`CLOUDFLARE.md`](./CLOUDFLARE.md) — hosting the web flavor: the artifact proxy, cost, and limits
 - [`C60.md`](./C60.md) — the C60 SDP unlock: WebHID in the browser, pure-Rust native fallback
-- Firmware side: [tc8-firmware-build](https://github.com/Polycom-Open-Firmware/tc8-firmware-build) — image build, boot model ([FLASHING](https://github.com/Polycom-Open-Firmware/tc8-firmware-build/blob/main/FLASHING.md)), config contract ([CONFIG-PARTITION](https://github.com/Polycom-Open-Firmware/tc8-firmware-build/blob/main/CONFIG-PARTITION.md))
+- Firmware side: [poly-firmware-build](https://github.com/Polycom-Open-Firmware/poly-firmware-build) — image build, boot model ([FLASHING](https://github.com/Polycom-Open-Firmware/poly-firmware-build/blob/main/FLASHING.md)), config contract ([CONFIG-PARTITION](https://github.com/Polycom-Open-Firmware/poly-firmware-build/blob/main/CONFIG-PARTITION.md))
 
 ## Status
 

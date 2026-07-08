@@ -3,7 +3,7 @@
 ## The problem
 
 The wizard flashes firmware that lives as **GitHub release assets** on
-`Polycom-Open-Firmware/tc8-firmware-build`. Those asset downloads send **no
+`Polycom-Open-Firmware/poly-firmware-build`. Those asset downloads send **no
 `access-control-allow-origin` header**, so a browser can't fetch them
 cross-origin. (The release *list* via `api.github.com` *is* CORS-enabled, so that
 part works everywhere.) Native apps don't care — they fetch outside the browser —
@@ -41,7 +41,7 @@ CORS wall again. This is a true proxy.
 Each device draws from its own firmware repo, selected by a small allowlist in
 the Functions (one entry per device, nothing else proxied):
 
-- `/releases` and `/artifact/<tag>/<asset>` → `tc8-firmware-build` (the
+- `/releases` and `/artifact/<tag>/<asset>` → `poly-firmware-build` (the
   default, so clients shipped before the device key existed keep working)
 - `/releases?device=c60` and `/artifact/c60/<tag>/<asset>` → the C60 firmware
   repo

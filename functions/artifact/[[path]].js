@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 // Cloudflare Pages Function — the single artifact path for every flavor. Streams a
-// tc8-firmware-build release asset from GitHub (server-side, dodging the asset's
+// poly-firmware-build release asset from GitHub (server-side, dodging the asset's
 // missing CORS) and adds `access-control-allow-origin: *` so the cross-origin fetch
 // works identically in the browser and the Tauri webview. Cloudflare egress is $0,
 // so the multi-GB rootfs streams free. Catch-all route → any tag/asset, no per-

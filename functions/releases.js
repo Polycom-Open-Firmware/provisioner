@@ -8,7 +8,7 @@
 //      usually lands on one that isn't rate-limited,
 //   3. a GITHUB_TOKEN if set on the Pages project (5000/h, no shared-IP limit).
 //
-// Route: GET /releases            -> tc8-firmware-build's GitHub releases (JSON)
+// Route: GET /releases            -> poly-firmware-build's GitHub releases (JSON)
 //        GET /releases?device=c60 -> the C60 firmware repo's releases
 //
 // `device` selects the source repo from the allowlist below; omitted = tc8, so
