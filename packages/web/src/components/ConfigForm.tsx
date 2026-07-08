@@ -69,30 +69,37 @@ export function ConfigForm({ form }: { form: StepForm }) {
   );
 
   const radios = (f: FormField) => (
-    <fieldset key={f.key} className="flex flex-col gap-2" disabled={busy}>
+    <div key={f.key} className="flex flex-col gap-1">
       <Caption>{f.label}</Caption>
-      {f.options!.map((o) => (
-        <label key={o.value} className="flex items-start gap-2 cursor-pointer">
-          <input
-            type="radio"
-            name={f.key}
-            value={o.value}
-            checked={(vals[f.key] ?? "") === o.value}
-            disabled={busy}
-            onChange={() => update(f.key, o.value)}
-            className="mt-1"
-          />
-          <span className="text-sm">{o.label}</span>
-        </label>
-      ))}
-    </fieldset>
+      <div className="flex rounded-lg border border-border overflow-hidden w-fit">
+        {f.options!.map((o) => {
+          const on = (vals[f.key] ?? "") === o.value;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              disabled={busy}
+              aria-pressed={on}
+              onClick={() => update(f.key, o.value)}
+              className={
+                "px-3 py-1.5 text-xs transition-colors " +
+                (on ? "bg-accent/15 text-accent font-medium" : "hover:bg-accent/5")
+              }
+              title={o.label}
+            >
+              {o.label.split(" — ")[0]}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 
   const tiles = (f: FormField) => {
     const selected = f.options!.find((o) => o.value === (vals[f.key] ?? ""));
     return (
       <div key={f.key} className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {f.options!.map((o) => {
             const on = (vals[f.key] ?? "") === o.value;
             return (
@@ -103,14 +110,14 @@ export function ConfigForm({ form }: { form: StepForm }) {
                 onClick={() => update(f.key, o.value)}
                 aria-pressed={on}
                 className={
-                  "flex flex-col items-center gap-1.5 rounded-xl border p-4 text-center transition-colors " +
+                  "flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors " +
                   (on
                     ? "border-accent ring-2 ring-accent bg-accent/10"
                     : "border-border hover:border-accent/50")
                 }
               >
-                <span className="text-3xl leading-none" aria-hidden>{o.icon}</span>
-                <span className="text-sm font-medium">{o.label}</span>
+                <span className="text-xl leading-none shrink-0" aria-hidden>{o.icon}</span>
+                <span className="flex flex-col min-w-0"><span className="text-sm font-medium leading-tight">{o.label}</span></span>
                 {o.description && (
                   <span className="text-[11px] text-muted leading-tight">{o.description}</span>
                 )}
@@ -124,7 +131,7 @@ export function ConfigForm({ form }: { form: StepForm }) {
           })}
         </div>
         {selected?.fields && selected.fields.length > 0 && (
-          <div className="flex flex-col gap-4 border-l-2 border-accent/30 pl-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-l-2 border-accent/30 pl-3">
             {selected.fields.map((sf) => (sf.options ? radios(sf) : textInput(sf)))}
           </div>
         )}
@@ -133,7 +140,7 @@ export function ConfigForm({ form }: { form: StepForm }) {
   };
 
   return (
-    <div className="mt-6 flex flex-col gap-4">
+    <div className="mt-5 flex flex-col gap-3">
       {form.fields.map((f) =>
         f.options
           ? f.options.some((o) => o.icon)
