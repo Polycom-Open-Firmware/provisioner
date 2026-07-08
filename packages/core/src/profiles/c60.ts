@@ -41,7 +41,7 @@ const C60_INSTALL_DANGER: DangerGate = {
  *  the "choose it from the list to …" sentence per flow. */
 const c60Reentry = (goal: string) =>
   "Power-cycle the device with the USB cable connected. When the mic/center light cue " +
-  "appears, hold four fingers on the screen during the 20-second window — the device " +
+  "appears, hold four fingers on the screen during the 8-second window — the device " +
   "enters programming mode. Then choose it from the list to " + goal + ".";
 
 /** Fetch our U-Boot (`flash.bin`) once per run — loaded into RAM over SDP. */
