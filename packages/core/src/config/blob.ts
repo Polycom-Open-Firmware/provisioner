@@ -38,6 +38,7 @@ export const CONFIG_KEYS = [
   "KIOSK_URL",
   "KIOSK_URL_FALLBACK",
   "COG_OPTS",
+  "KIOSK_ENGINE",
   "TIMEZONE",
   "NTP_SERVER",
   "WIFI_SSID",

@@ -47,9 +47,17 @@ export interface FormField {
   /** Render as a password-style input. */
   secret?: boolean;
   /** When set, render a picker (not a text input): one choice per option, the
-   *  chosen `value` written to `key`. First option is the default. Used for the
-   *  device-role profile (kiosk/dev). */
-  options?: { value: string; label: string }[];
+   *  chosen `value` written to `key`. First option is the default. Options with
+   *  an `icon` render as a tile grid (the Application page); plain options
+   *  render as radios. An option may carry its own `fields`, rendered beneath
+   *  the picker while it is selected (per-app settings). */
+  options?: {
+    value: string;
+    label: string;
+    description?: string;
+    icon?: string;
+    fields?: FormField[];
+  }[];
 }
 
 /** A confirm step's operator-input form. Pure data — the UI shell renders it

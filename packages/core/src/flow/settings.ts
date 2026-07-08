@@ -32,11 +32,10 @@ export const DEVICE_SETTINGS: SettingsSection = {
   id: "device",
   rail: "Device",
   title: "Device settings",
-  intro: "Name the device and point it at its kiosk.",
+  intro: "Name the device and set its clock.",
   form: {
     fields: [
       { key: "DEVICE_NAME", label: "Device name", placeholder: "lobby-east" },
-      { key: "KIOSK_URL", label: "Kiosk URL", placeholder: "https://dash.local" },
       { key: "TIMEZONE", label: "Time zone", placeholder: "America/New_York" },
       { key: "NTP_SERVER", label: "NTP server", placeholder: "192.168.1.1" },
     ],

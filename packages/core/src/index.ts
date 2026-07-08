@@ -45,7 +45,7 @@ export type { SettingsIntent, SettingsSection } from "./flow/settings";
 export {
   applicationSection,
   APP_KIOSK,
-  APP_DEV,
+  APP_NONE,
   APP_SMART_SPEAKER,
   TC8_APPLICATIONS,
   C60_APPLICATIONS,
