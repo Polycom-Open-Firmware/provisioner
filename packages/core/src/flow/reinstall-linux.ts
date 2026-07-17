@@ -222,9 +222,9 @@ export function osInstallSteps(
       danger: opts?.danger ?? {
         title: "Erase and install?",
         message:
-          "This will WIPE all user data on the device and replace its operating system. " +
-          "This cannot be undone. Exception: files in /root (root's home) live on a " +
-          "separate partition and survive the reinstall (firmware v0.4.7 and later).",
+          "This wipes the root partition and installs a fresh operating system — this " +
+          "can't be undone. The data partition is left untouched, so files in /root " +
+          "(root's home) survive the reinstall.",
         confirmLabel: "Wipe & install",
       },
       run: (ctx) => runFlash(ctx, opts?.install),
