@@ -110,22 +110,26 @@ export function ConfigForm({ form }: { form: StepForm }) {
                 onClick={() => update(f.key, o.value)}
                 aria-pressed={on}
                 className={
-                  "flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors " +
+                  "flex items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors " +
                   (on
                     ? "border-accent ring-2 ring-accent bg-accent/10"
                     : "border-border hover:border-accent/50")
                 }
               >
-                <span className="text-xl leading-none shrink-0" aria-hidden>{o.icon}</span>
-                <span className="flex flex-col min-w-0"><span className="text-sm font-medium leading-tight">{o.label}</span></span>
-                {o.description && (
-                  <span className="text-[11px] text-muted leading-tight">{o.description}</span>
-                )}
-                {(o.badge ?? (o.pkg && versions[o.pkg] && "v" + versions[o.pkg])) && (
-                  <span className="text-[10px] text-muted/70 leading-none">
-                    {o.badge ?? "v" + versions[o.pkg!]}
+                <span className="text-xl leading-none shrink-0 mt-0.5" aria-hidden>{o.icon}</span>
+                <span className="flex flex-col min-w-0 flex-1 gap-0.5">
+                  <span className="flex items-baseline gap-1.5">
+                    <span className="text-sm font-medium leading-tight truncate">{o.label}</span>
+                    {(o.badge ?? (o.pkg && versions[o.pkg] && "v" + versions[o.pkg])) && (
+                      <span className="text-[10px] text-muted/70 leading-none shrink-0">
+                        {o.badge ?? "v" + versions[o.pkg!]}
+                      </span>
+                    )}
                   </span>
-                )}
+                  {o.description && (
+                    <span className="text-[11px] text-muted leading-snug">{o.description}</span>
+                  )}
+                </span>
               </button>
             );
           })}
