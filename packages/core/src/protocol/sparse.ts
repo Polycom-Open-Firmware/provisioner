@@ -7,10 +7,11 @@
 // Our build emits a complete Android sparse image of the (multi-GiB, mostly-zero)
 // ext4 rootfs. Even the sparse payload can exceed the device max-download-size,
 // so this module re-splits ("resparses") it into N self-contained sub-images,
-// each <= fb.maxDownload, and flashes them in sequence. Each sub-image carries
-// the FULL image's total_blks and, when it doesn't start at block 0, a leading
-// DONT_CARE chunk so the device's sparse writer lands the data at the right
-// partition offset.
+// each <= fb.maxDownload, and flashes them in sequence. When a sub-image doesn't
+// start at block 0 it carries a leading DONT_CARE chunk so the device's sparse
+// writer lands the data at the right partition offset, and its header total_blks
+// counts only the blocks that sub-image covers (offset + its own chunks) — the
+// device rejects any sub-image whose chunk-block sum != its header total_blks.
 import type { Fastboot, InfoCb, ProgressCb } from "./fastboot";
 
 const SPARSE_MAGIC = 0xed26ff3a;
@@ -168,11 +169,24 @@ export function planResparse(parsed: ParsedSparse, maxDownload: number): Respars
 }
 
 /** Materialize one planned sub-image into a Uint8Array of exactly plan.size bytes. */
-function buildSubimage(parsed: ParsedSparse, plan: SubImage, totalBlks: number, blkSz: number): Uint8Array {
+function buildSubimage(parsed: ParsedSparse, plan: SubImage, _totalBlks: number, blkSz: number): Uint8Array {
   const out = new Uint8Array(plan.size);
   const dv = new DataView(out.buffer);
   const hasLead = plan.startBlock > 0;
   const totalChunks = plan.items.length + (hasLead ? 1 : 0);
+
+  // A sub-image's total_blks must equal the blocks THIS sub-image accounts for —
+  // the leading DONT_CARE (startBlock) plus its own chunk blocks — NOT the full
+  // image's block count. U-Boot's sparse writer (lib/image-sparse.c) sums every
+  // chunk's chunk_sz and fails with "sparse image write failure" if that running
+  // total != the header's total_blks. Writing the full count only balanced when
+  // there was a single sub-image spanning the whole image; a 2+ way split (payload
+  // > device max-download-size) made every non-final sub-image over-declare and
+  // fail. This matches AOSP libsparse's sparse_file_resparse: no trailing skip,
+  // header total = offset + data blocks. (Blocks not covered here are holes a
+  // later sub-image — or nothing — fills; ext4's size lives in its superblock.)
+  let coveredBlks = plan.startBlock;
+  for (const it of plan.items) coveredBlks += it.blocks;
 
   dv.setUint32(0, SPARSE_MAGIC, true);
   dv.setUint16(4, MAJOR_VERSION, true);
@@ -180,7 +194,7 @@ function buildSubimage(parsed: ParsedSparse, plan: SubImage, totalBlks: number, 
   dv.setUint16(8, FILE_HDR_SZ, true);
   dv.setUint16(10, CHUNK_HDR_SZ, true);
   dv.setUint32(12, blkSz, true);
-  dv.setUint32(16, totalBlks, true); // FULL image block count
+  dv.setUint32(16, coveredBlks, true); // blocks THIS sub-image covers (offset + data)
   dv.setUint32(20, totalChunks, true);
   dv.setUint32(24, 0, true); // image_checksum
 
@@ -239,3 +253,7 @@ export async function flashSparse(
   }
   return { subimages: subimages.length, totalBytes };
 }
+
+// Test-only surface: the device-side block-accounting check lives in buildSubimage,
+// and sparse.test.ts reproduces U-Boot's acceptance rule against real images.
+export { SPARSE_MAGIC, buildSubimage as __buildSubimageForTest };
