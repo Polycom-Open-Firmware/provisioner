@@ -1,0 +1,42 @@
+name: Deploy to Cloudflare Pages
+
+# The Pages project is NOT connected to Git (direct-upload only), so a push to
+# main does not deploy on its own. This workflow builds the web SPA and pushes
+# it (plus the functions/ proxy) to the `provisioner` Pages project as a
+# production deployment. Requires the CLOUDFLARE_API_TOKEN repo secret.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'functions/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch: {}
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @provisioner/web
+      - name: Strip dev-only artifacts
+        # public/artifacts is a local-dev symlink to the firmware images; in
+        # production the functions/artifact proxy streams them from GitHub, and
+        # Pages rejects files > 25 MiB. Never ship them.
+        run: rm -rf packages/web/dist/artifacts
+      - name: Deploy (production)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: pages deploy packages/web/dist --project-name=provisioner --branch=main
