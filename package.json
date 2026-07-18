@@ -2,7 +2,7 @@
   "name": "provisioner",
   "version": "0.4.1",
   "private": true,
-  "description": "Device provisioning wizard — shared core, web + native (Tauri) flavors.",
+  "description": "Device provisioning wizard \u2014 shared core, web + native (Tauri) flavors.",
   "workspaces": [
     "packages/core",
     "packages/web",
@@ -14,5 +14,8 @@
   "devDependencies": {
     "typescript": "^5.5.0"
   },
-  "license": "GPL-2.0-or-later"
+  "license": "GPL-2.0-or-later",
+  "engines": {
+    "node": ">=18"
+  }
 }

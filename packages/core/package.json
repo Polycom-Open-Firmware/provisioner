@@ -12,5 +12,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
-  "license": "GPL-2.0-or-later"
+  "license": "GPL-2.0-or-later",
+  "engines": {
+    "node": ">=18"
+  }
 }

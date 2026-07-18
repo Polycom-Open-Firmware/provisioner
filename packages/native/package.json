@@ -11,5 +11,8 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2.1.0"
   },
-  "license": "GPL-2.0-or-later"
+  "license": "GPL-2.0-or-later",
+  "engines": {
+    "node": ">=18"
+  }
 }
