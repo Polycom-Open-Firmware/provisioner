@@ -48,9 +48,12 @@ functions/   Cloudflare Pages Function — same-origin firmware-artifact proxy.
 
 ## Develop
 
+Requires `git` and Node.js ≥ 18 with npm. Clone from
+`https://github.com/Polycom-Open-Firmware/provisioner`.
+
 ```
 npm install
-npm run typecheck                    # all workspaces
+npm run typecheck                    # workspaces with a typecheck script (core, web)
 npm run dev -w @provisioner/web      # wizard dev server (http://localhost:5173)
 npm run build -w @provisioner/web    # production bundle
 ```
@@ -59,8 +62,11 @@ The web app needs Chrome or Edge and a secure context (localhost counts).
 Firmware artifacts come from the GitHub releases of
 [poly-firmware-build](https://github.com/Polycom-Open-Firmware/poly-firmware-build):
 in production through the same-origin proxy, in local dev from
-`packages/web/public/artifacts/`. Deploys are automatic — pushing `main`
-rebuilds wizard.openpolycom.cc (see [`CLOUDFLARE.md`](./CLOUDFLARE.md)).
+`packages/web/public/artifacts/`. That directory is not in the repository —
+create it (or symlink it to an artifact set) and populate it with release
+assets from the firmware repos' GitHub releases. Deploys are automatic —
+pushing `main` rebuilds wizard.openpolycom.cc (see
+[`CLOUDFLARE.md`](./CLOUDFLARE.md)).
 
 ## Documentation
 
@@ -73,9 +79,8 @@ rebuilds wizard.openpolycom.cc (see [`CLOUDFLARE.md`](./CLOUDFLARE.md)).
 
 v0.4.1, live at [wizard.openpolycom.cc](https://wizard.openpolycom.cc/).
 
-- **TC8** — unlock, reinstall, and configure proven on hardware.
-- **C60** — browser unlock (WebHID SDP) boots our U-Boot on hardware; the
-  install tail is the same fastboot flow as the TC8. Persistent autoboot is
-  still a firmware-side TODO.
-- **Native (Tauri)** — wired (`uuu` shell-out by default, pure-Rust SDP
-  behind `native_sdp`), not yet exercised on hardware.
+- **TC8** — unlock, reinstall, and configure.
+- **C60** — browser unlock (WebHID SDP) boots the project's U-Boot; the
+  install tail is the same fastboot flow as the TC8.
+- **Native (Tauri)** — `uuu` shell-out by default, pure-Rust SDP loader
+  behind `native_sdp`.

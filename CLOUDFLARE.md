@@ -5,20 +5,21 @@
 The wizard flashes firmware that lives as **GitHub release assets** on
 `Polycom-Open-Firmware/poly-firmware-build`. Those asset downloads send **no
 `access-control-allow-origin` header**, so a browser can't fetch them
-cross-origin. (The release *list* via `api.github.com` *is* CORS-enabled, so that
-part works everywhere.) Native apps don't care — they fetch outside the browser —
-but the in-browser flavor needs a same-origin source for the bytes.
+cross-origin. The in-browser flavor needs a same-origin source for the bytes;
+unauthenticated `api.github.com` calls also rate-limit unpredictably, so the
+release list is proxied too.
 
-## How each flavor gets its artifacts
+## How the app gets its artifacts
 
-| Flavor | OS list | Image bytes |
-|---|---|---|
-| **Native (Tauri)** | GitHub API | GitHub release asset, fetched Rust-side via `tauri-plugin-http` (no webview CORS) |
-| **Web — hosted** | GitHub API | same-origin `/artifact/<tag>/<asset>` → Cloudflare Pages Function |
-| **Web — local dev** | GitHub API | the temporary `./artifacts/` files (same-origin localhost) |
+One path for every flavor: the release list comes from the `/releases` Pages
+Function (an edge-cached GitHub proxy) and the image bytes from same-origin
+`/artifact/<tag>/<asset>` — both served by the Cloudflare deployment. The
+native flavor points at the same hosted endpoints. In local dev the bytes
+come from `packages/web/public/artifacts/` (same-origin localhost).
 
-`packages/web/src/os-catalog.ts` picks the source from the runtime environment;
-the OS chooser lists releases from the GitHub API in every flavor.
+`packages/web/src/os-catalog.ts` picks the byte source from the runtime
+environment; the OS chooser lists releases via the `/releases` Function in
+every flavor.
 
 ## The proxy — a streaming, same-origin **proxy** (not a redirect)
 
@@ -50,7 +51,8 @@ the Functions (one entry per device, nothing else proxied):
 
 The route is parameterized (`[[path]]` = `<tag>/<asset>`), so it resolves any tag
 on the fly. Tag a new firmware release on GitHub and:
-- it auto-appears in the OS chooser (live GitHub API query), and
+- it auto-appears in the OS chooser (the `/releases` Function queries GitHub
+  live, with a short edge cache), and
 - it flashes through the same proxy unchanged.
 
 No new proxy entry, no redeploy. The only things that would ever need a code
@@ -65,24 +67,23 @@ assets), so C60 asset names can change freely.
 ### 1. Cloudflare account + domain
 - Sign up at dash.cloudflare.com (free).
 - **Add a domain** → `openpolycom.cc` → Free plan → set the two Cloudflare
-  nameservers it shows you at the registrar (Namecheap: Domain → Nameservers →
-  Custom DNS → save with the ✓). Wait for the zone to go **Active**.
+  nameservers it shows you (at your registrar). Wait for the zone to go
+  **Active**.
 - Delete any imported **parking record** (`A @ → <registrar parking IP>`) — it
   otherwise keeps the domain on the parked page.
 
-### 2. Pages project (connect the repo, auto-deploys on push)
-Workers & Pages → Create → Pages → Connect to Git → `Polycom-Open-Firmware/provisioner`:
+### 2. Pages project (direct upload, deployed from GitHub Actions)
+Workers & Pages → Create → Pages → **Direct Upload** → project name
+`provisioner`. The project is **not** connected to Git — a push does not
+deploy by itself.
 
-| Setting | Value |
-|---|---|
-| Production branch | `main` |
-| Framework preset | None |
-| Build command | `npm ci && npm run build -w @provisioner/web` |
-| Build output directory | `packages/web/dist` |
-| Root directory | *(repo root)* |
-
-Pages auto-discovers `functions/` at the repo root, so the proxy ships with the
-site. You get a `*.pages.dev` URL immediately.
+Deploys run from GitHub Actions instead: on push to `main`,
+`.github/workflows/deploy.yml` builds the SPA
+(`npm ci && npm run build -w @provisioner/web`) and publishes
+`packages/web/dist` with `wrangler pages deploy`. It needs the
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repo secrets. The
+`functions/` directory at the repo root ships with each deploy, so the proxy
+travels with the site. You get a `*.pages.dev` URL on the first deploy.
 
 ### 3. Custom domain
 Pages project → **Custom domains** → add `wizard.openpolycom.cc`. Since the
