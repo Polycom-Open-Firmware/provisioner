@@ -68,10 +68,26 @@ assets from the firmware repos' GitHub releases. Deploys are automatic —
 pushing `main` rebuilds wizard.openpolycom.cc (see
 [`CLOUDFLARE.md`](./CLOUDFLARE.md)).
 
+## Build & CI
+
+Three GitHub Actions workflows (`.github/workflows/`):
+
+- **`ci.yml`** (push, PR) — `web` job typechecks and builds the SPA; `native`
+  job builds the SPA and compiles the Tauri Rust crate. No secrets.
+- **`deploy.yml`** (push to `main` touching `packages/`, `functions/`, the
+  package manifests, or the workflow) — builds the SPA and deploys it plus the
+  proxy Functions to the
+  Cloudflare **Pages project `provisioner`** (direct upload, not git-connected).
+  Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. See
+  [`CLOUDFLARE.md`](./CLOUDFLARE.md).
+- **`release.yml`** (tag `v*`) — builds native Tauri installers for macOS
+  (universal), Linux, and Windows and a `provisioner-web-<tag>.zip`, attached
+  to a GitHub Release. Uses the built-in `GITHUB_TOKEN`.
+
 ## Documentation
 
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — the layered design: transport seam, protocols, flows, device profiles
-- [`CLOUDFLARE.md`](./CLOUDFLARE.md) — hosting the web flavor: the artifact proxy, cost, and limits
+- [`CLOUDFLARE.md`](./CLOUDFLARE.md) — hosting the web flavor: the artifact proxy, deploy, cost, and limits
 - [`C60.md`](./C60.md) — the C60 SDP unlock: WebHID in the browser, pure-Rust native fallback
 - Firmware side: [poly-firmware-build](https://github.com/Polycom-Open-Firmware/poly-firmware-build) — image build, boot model ([FLASHING](https://github.com/Polycom-Open-Firmware/poly-firmware-build/blob/main/FLASHING.md)), config contract ([CONFIG-PARTITION](https://github.com/Polycom-Open-Firmware/poly-firmware-build/blob/main/CONFIG-PARTITION.md))
 
