@@ -55,6 +55,16 @@ export const APP_KIOSK: Application = {
   ],
 };
 
+/** Kodi media center, fullscreen on GBM/KMS. Board-agnostic: the C60 image
+ *  adds its portrait skin; the TC8 runs Kodi's default landscape skin. */
+export const APP_MEDIA_PLAYER: Application = {
+  id: "media-player",
+  label: "Media player",
+  description: "Kodi media center.",
+  icon: "🎬",
+  pkg: "poly-app-kodi",
+};
+
 /** No application: the device boots to a console and nothing else runs.
  *  (Every unit already has developer access — ssh + root shell — so this
  *  replaces a separate "developer" app.) */
@@ -79,7 +89,7 @@ export const APP_SMART_SPEAKER: Application = {
 // ONE master list; a device's menu is the board-agnostic apps plus the ones
 // restricted to that board. Order = menu order; first entry = default.
 
-export const APPLICATIONS: Application[] = [APP_KIOSK, APP_SMART_SPEAKER, APP_NONE];
+export const APPLICATIONS: Application[] = [APP_KIOSK, APP_MEDIA_PLAYER, APP_SMART_SPEAKER, APP_NONE];
 
 /** The applications offered on a device: everything not restricted to another
  *  board. */
