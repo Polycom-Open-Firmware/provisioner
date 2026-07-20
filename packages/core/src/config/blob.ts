@@ -50,6 +50,8 @@ export const CONFIG_KEYS = [
   "CA_CERT_B64",
   "VOLUME_MASTER",
   "VOLUME_SPEAKER",
+  "MEDIA_MODE",
+  "MEDIA_SOURCE",
 ] as const;
 
 export type ConfigKey = (typeof CONFIG_KEYS)[number];

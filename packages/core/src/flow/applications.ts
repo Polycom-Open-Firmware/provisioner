@@ -55,14 +55,31 @@ export const APP_KIOSK: Application = {
   ],
 };
 
-/** Kodi media center, fullscreen on GBM/KMS. Board-agnostic: the C60 image
- *  adds its portrait skin; the TC8 runs Kodi's default landscape skin. */
+/** Kodi media center as the kiosk's Wayland client. Board-agnostic: the C60
+ *  image adds its portrait skin; the TC8 runs Kodi's default landscape skin.
+ *  Two modes: the full Kodi UI, or a light "photo frame" that boots straight
+ *  into a slideshow of the device's media. */
 export const APP_MEDIA_PLAYER: Application = {
   id: "media-player",
   label: "Media player",
   description: "Kodi media center.",
   icon: "🎬",
   pkg: "poly-app-kodi",
+  fields: [
+    {
+      key: "MEDIA_MODE",
+      label: "Mode",
+      options: [
+        { value: "full", label: "Full media experience — the whole Kodi UI" },
+        { value: "photoframe", label: "Digital photo frame — boots into a slideshow of your media" },
+      ],
+    },
+    {
+      key: "MEDIA_SOURCE",
+      label: "Media server",
+      placeholder: "smb://server/share (optional — local media always plays)",
+    },
+  ],
 };
 
 /** No application: the device boots to a console and nothing else runs.
