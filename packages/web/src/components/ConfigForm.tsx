@@ -10,8 +10,10 @@
 // and the flow never imports React. Blank fields are left as-is on the device.
 //
 // Picker fields (FormField.options): options with an `icon` render as a tile
-// grid (the Application page); plain options render as radios. A selected
-// option's own `fields` render beneath the picker (per-app settings).
+// grid (the Application page); plain options render as radios. Icon tiles are
+// master→detail: the grid is a picker of applications, and choosing one drills
+// into a page with just that application's own `fields` (per-app settings) and
+// a link back to the grid — one thing per screen, inside the wizard window.
 import * as React from "react";
 import { configStore, type ConfigFields, type FormField, type StepForm } from "@provisioner/core";
 import { useWizard } from "@/lib/wizard";
@@ -48,10 +50,19 @@ export function ConfigForm({ form }: { form: StepForm }) {
     return () => { on = false; };
   }, []);
 
+  // Which icon-tile picker is drilled into its selected app's config page
+  // (null = showing the picker grid). Keyed by field so the grid ↔ detail
+  // toggle is per-picker.
+  const [drilledKey, setDrilledKey] = React.useState<string | null>(null);
+
   const update = (key: string, value: string) => {
     setVals((v) => ({ ...v, [key]: value }));
     configStore.set({ [key]: value } as ConfigFields);
   };
+
+  type Option = NonNullable<FormField["options"]>[number];
+  const versionBadge = (o: Option) =>
+    o.badge ?? (o.pkg && versions[o.pkg] ? "v" + versions[o.pkg] : undefined);
 
   const textInput = (f: FormField) => (
     <label key={f.key} className="flex flex-col gap-1">
@@ -95,50 +106,89 @@ export function ConfigForm({ form }: { form: StepForm }) {
     </div>
   );
 
-  const tiles = (f: FormField) => {
-    const selected = f.options!.find((o) => o.value === (vals[f.key] ?? ""));
+  // The selected application's own config page: header + its fields, with a
+  // link back to the picker grid.
+  const appDetail = (f: FormField, o: Option) => {
+    const badge = versionBadge(o);
     return (
       <div key={f.key} className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {f.options!.map((o) => {
-            const on = (vals[f.key] ?? "") === o.value;
-            return (
-              <button
-                key={o.value}
-                type="button"
-                disabled={busy}
-                onClick={() => update(f.key, o.value)}
-                aria-pressed={on}
-                className={
-                  "flex items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors " +
-                  (on
-                    ? "border-accent ring-2 ring-accent bg-accent/10"
-                    : "border-border hover:border-accent/50")
-                }
-              >
-                <span className="text-xl leading-none shrink-0 mt-0.5" aria-hidden>{o.icon}</span>
-                <span className="flex flex-col min-w-0 flex-1 gap-0.5">
-                  <span className="flex items-baseline gap-1.5">
-                    <span className="text-sm font-medium leading-tight truncate">{o.label}</span>
-                    {(o.badge ?? (o.pkg && versions[o.pkg] && "v" + versions[o.pkg])) && (
-                      <span className="text-[10px] text-muted/70 leading-none shrink-0">
-                        {o.badge ?? "v" + versions[o.pkg!]}
-                      </span>
-                    )}
-                  </span>
-                  {o.description && (
-                    <span className="text-[11px] text-muted leading-snug">{o.description}</span>
+        <button
+          type="button"
+          onClick={() => setDrilledKey(null)}
+          className="flex items-center gap-1.5 text-xs text-muted hover:text-accent w-fit -mb-1"
+        >
+          <span aria-hidden>←</span> Applications
+        </button>
+        <div className="flex items-start gap-3">
+          <span className="text-3xl leading-none shrink-0" aria-hidden>{o.icon}</span>
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <div className="flex items-baseline gap-2">
+              <span className="text-base font-semibold leading-tight">{o.label}</span>
+              {badge && <span className="text-[10px] text-muted/70 leading-none shrink-0">{badge}</span>}
+            </div>
+            {o.description && <span className="text-xs text-muted leading-snug">{o.description}</span>}
+          </div>
+        </div>
+        {o.fields && o.fields.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {o.fields.map((sf) => (sf.options ? radios(sf) : textInput(sf)))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted">No further settings — {o.label} runs as-is.</p>
+        )}
+      </div>
+    );
+  };
+
+  // Icon-tile picker as master→detail: a big grid of applications; choosing one
+  // drills into its own config page. The grid keeps the current choice ringed
+  // so stepping back lands on it.
+  const tiles = (f: FormField) => {
+    const selected = f.options!.find((o) => o.value === (vals[f.key] ?? ""));
+    if (drilledKey === f.key && selected) return appDetail(f, selected);
+    return (
+      <div key={f.key} className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        {f.options!.map((o) => {
+          const on = (vals[f.key] ?? "") === o.value;
+          const badge = versionBadge(o);
+          return (
+            <button
+              key={o.value}
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                update(f.key, o.value);
+                setDrilledKey(f.key);
+              }}
+              aria-pressed={on}
+              className={
+                "group flex items-center gap-3 rounded-xl border px-4 py-3.5 text-left transition-colors " +
+                (on
+                  ? "border-accent ring-2 ring-accent bg-accent/10"
+                  : "border-border hover:border-accent/50 hover:bg-accent/5")
+              }
+            >
+              <span className="text-3xl leading-none shrink-0" aria-hidden>{o.icon}</span>
+              <span className="flex flex-col min-w-0 flex-1 gap-0.5">
+                <span className="flex items-baseline gap-1.5">
+                  <span className="text-sm font-semibold leading-tight truncate">{o.label}</span>
+                  {badge && (
+                    <span className="text-[10px] text-muted/70 leading-none shrink-0">{badge}</span>
                   )}
                 </span>
-              </button>
-            );
-          })}
-        </div>
-        {selected?.fields && selected.fields.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-l-2 border-accent/30 pl-3">
-            {selected.fields.map((sf) => (sf.options ? radios(sf) : textInput(sf)))}
-          </div>
-        )}
+                {o.description && (
+                  <span className="text-[11px] text-muted leading-snug">{o.description}</span>
+                )}
+              </span>
+              <span
+                className="text-muted/40 group-hover:text-accent shrink-0 text-lg leading-none"
+                aria-hidden
+              >
+                ›
+              </span>
+            </button>
+          );
+        })}
       </div>
     );
   };
