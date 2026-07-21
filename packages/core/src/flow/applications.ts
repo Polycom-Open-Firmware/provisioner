@@ -139,9 +139,6 @@ export function applicationSection(apps: Application[]): SettingsSection {
           })),
         },
       ],
-      note:
-        "Applications are baked into the image — first boot needs no network. " +
-        "Left untouched, the first one is used.",
     },
   };
 }
