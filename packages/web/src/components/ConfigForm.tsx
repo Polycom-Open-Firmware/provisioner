@@ -130,7 +130,7 @@ export function ConfigForm({ form }: { form: StepForm }) {
           </div>
         </div>
         {o.fields && o.fields.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex flex-col gap-3">
             {o.fields.map((sf) => (sf.options ? radios(sf) : textInput(sf)))}
           </div>
         ) : (
@@ -147,7 +147,7 @@ export function ConfigForm({ form }: { form: StepForm }) {
     const selected = f.options!.find((o) => o.value === (vals[f.key] ?? ""));
     if (drilledKey === f.key && selected) return appDetail(f, selected);
     return (
-      <div key={f.key} className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+      <div key={f.key} className="flex flex-col gap-2.5">
         {f.options!.map((o) => {
           const on = (vals[f.key] ?? "") === o.value;
           const badge = versionBadge(o);
