@@ -34,6 +34,7 @@ export type { RunnerOptions } from "./engine/runner";
 export { unlockFlow } from "./flow/unlock";
 export { reinstallLinuxFlow, osInstallSteps, setupSteps } from "./flow/reinstall-linux";
 export { configureFlow } from "./flow/configure";
+export { updateBootloaderFlow } from "./flow/update-bootloader";
 export {
   settingsSteps,
   DEVICE_SETTINGS,

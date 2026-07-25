@@ -13,6 +13,7 @@ import type { Device } from "../engine/types";
 import { unlockFlow } from "../flow/unlock";
 import { reinstallLinuxFlow } from "../flow/reinstall-linux";
 import { configureFlow } from "../flow/configure";
+import { updateBootloaderFlow } from "../flow/update-bootloader";
 import { ACCESS_SETTINGS, DEVICE_SETTINGS } from "../flow/settings";
 import { applicationSection, applicationsFor } from "../flow/applications";
 
@@ -52,6 +53,7 @@ export function tc8Profile(): Device {
       configureFlow({
         sections: [applicationSection(applicationsFor("tc8")), DEVICE_SETTINGS, ACCESS_SETTINGS],
       }),
+      updateBootloaderFlow(),
     ],
   };
 }
