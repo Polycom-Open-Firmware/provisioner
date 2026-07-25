@@ -18,10 +18,14 @@ import { ensurePartitionTable, type TableSpec } from "./partitions";
 import { settingsSteps, type SettingsSection } from "./settings";
 
 const SLOT = "a"; // "replace stock": overwrite boot_a/dtbo_a/vbmeta_a + the rootfs
+const C60_FASTBOOT_BUF_ADDR = 0x42800000; // CONFIG_FASTBOOT_BUF_ADDR — where download lands
 
 interface InstallOptions {
   /** C60 only: persist the SDP-loaded open U-Boot into the eMMC boot area. */
   replaceBootloader?: boolean;
+  /** Raw config-blob target for devices with no named `cache` partition
+   *  (the C60): the install-tail settings write and Configure share it. */
+  rawConfig?: RawPartitionSpec;
   /** The device's GPT contract. A TableSpec enables the name-probe + repair
    *  path with that device's restore image. `null` = the device installs via
    *  a manifest raw partition map only — no name-probe, and a manifest
@@ -187,12 +191,35 @@ async function runFlash(ctx: FlowContext, opts: InstallOptions = {}): Promise<vo
   const cfgKeys = configFieldsToLines(cfgFields).filter((l) => !l.startsWith("#"));
   if (cfgKeys.length) {
     const blob = await buildConfigBlob(cfgFields);
-    ctx.log(
-      "flashing " + CONFIG_PARTITION + " config blob (" + blob.byteLength + " B, " +
-        cfgKeys.length + " setting(s))...",
-    );
-    await ctx.fb.flash(CONFIG_PARTITION, blob, undefined, info);
-    ctx.log("  " + CONFIG_PARTITION + " OK");
+    if (opts.rawConfig) {
+      // No named config partition on this device (the C60 GPT has no `cache`);
+      // the blob goes to the device's raw config region by direct mmc write —
+      // the same download + UCmd path the Configure flow uses (the fastboot
+      // name lookup only resolves GPT entries on this u-boot).
+      const blockSize = 512;
+      const padded = new Uint8Array(Math.ceil(blob.byteLength / blockSize) * blockSize);
+      padded.set(blob);
+      const blocks = padded.byteLength / blockSize;
+      ctx.log(
+        "writing config blob to raw LBA 0x" + opts.rawConfig.startLBA.toString(16) +
+          " (" + blob.byteLength + " B, " + cfgKeys.length + " setting(s))...",
+      );
+      await ctx.fb.download(padded);
+      await ctx.fb.ucmd("mmc dev 0 0", info);
+      await ctx.fb.ucmd(
+        "mmc write 0x" + C60_FASTBOOT_BUF_ADDR.toString(16) + " 0x" +
+          opts.rawConfig.startLBA.toString(16) + " 0x" + blocks.toString(16),
+        info,
+      );
+      ctx.log("  config blob OK");
+    } else {
+      ctx.log(
+        "flashing " + CONFIG_PARTITION + " config blob (" + blob.byteLength + " B, " +
+          cfgKeys.length + " setting(s))...",
+      );
+      await ctx.fb.flash(CONFIG_PARTITION, blob, undefined, info);
+      ctx.log("  " + CONFIG_PARTITION + " OK");
+    }
   }
 
   // make the slot active + reboot into Debian.

@@ -26,6 +26,10 @@ export const C60_FILTERS: UsbFilter[] = [
   { vendorId: 0x1fc9, productId: 0x0152 },
 ];
 
+/** The C60 config blob target: no `cache` partition exists — the blob goes
+ *  to this raw region (read by the boot-time applier). */
+const C60_RAW_CONFIG = { startLBA: 0x738000, sizeLBA: 0x200000 };
+
 /** The C60 install overwrites slot A (system_a), not userdata — the default TC8
  *  "WIPE userdata" warning would be wrong here. */
 const C60_INSTALL_DANGER: DangerGate = {
@@ -40,8 +44,8 @@ const C60_INSTALL_DANGER: DangerGate = {
  *  fastboot on the four-finger gesture during its boot window. `goal` finishes
  *  the "choose it from the list to …" sentence per flow. */
 const c60Reentry = (goal: string) =>
-  "Power-cycle the device with the USB cable connected. When the mic/center light cue " +
-  "appears, hold four fingers on the screen during the 8-second window — the device " +
+  "Power-cycle the device with the USB cable connected. When the light bar breathes, " +
+  "hold FOUR fingers on the screen for a second — the bar turns green and the device " +
   "enters programming mode. Then choose it from the list to " + goal + ".";
 
 /** Fetch our U-Boot (`flash.bin`) once per run — loaded into RAM over SDP. */
@@ -124,8 +128,11 @@ export function c60UnlockFlow(): Flow {
           "so the device reboots straight into Linux when the install finishes.",
         {
           connectImage: "/c60/usb-connect.svg",
-          install: { replaceBootloader: true, table: null },
+          install: { replaceBootloader: true, table: null, rawConfig: C60_RAW_CONFIG },
           danger: C60_INSTALL_DANGER,
+          doneBody:
+            "Flash complete. Flip both BOOT_MODE switches back to normal NOW, then " +
+            "power-cycle — the device boots the installed OS.",
         },
       ),
     ],
@@ -150,8 +157,11 @@ function c60InstallFlow(): Flow {
           "both BOOT_MODE switches to OFF and use Unlock and Install instead.",
         {
           connectImage: "/c60/usb-connect.svg",
-          install: { replaceBootloader: true, table: null },
+          install: { replaceBootloader: true, table: null, rawConfig: C60_RAW_CONFIG },
           danger: C60_INSTALL_DANGER,
+          doneBody:
+            "Flash complete. Flip both BOOT_MODE switches back to normal NOW, then " +
+            "power-cycle — the device boots the installed OS.",
         },
       ),
     ],
@@ -179,7 +189,7 @@ export function c60Profile(): Device {
           NETWORK_SETTINGS,
           ACCESS_SETTINGS,
         ],
-        rawConfig: { startLBA: 0x738000, sizeLBA: 0x200000 },
+        rawConfig: C60_RAW_CONFIG,
         connectBody: c60Reentry("apply the settings"),
         connectImage: "/c60/usb-connect.svg",
       }),
