@@ -86,7 +86,7 @@ export async function listOsBuilds(device: DeviceId = "tc8", fresh = false): Pro
 
 /** The Artifacts source for a chosen build of a device. */
 export function artifactsFor(build: OsBuild, device: DeviceId = "tc8"): Artifacts {
-  return build.local ? new HttpArtifacts("./artifacts/") : new ProxyArtifacts(build.tag, device);
+  return build.local ? new HttpArtifacts("./artifacts/", device) : new ProxyArtifacts(build.tag, device);
 }
 
 // Bytes come from the Cloudflare /artifact proxy. Manifest resolution differs per
