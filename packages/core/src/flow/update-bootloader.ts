@@ -40,7 +40,7 @@ async function runUpdate(ctx: FlowContext, table?: TableSpec): Promise<void> {
 
   // Same GPT guard as Configure: an invalid table means no cache partition to
   // stage into — send the operator to an install instead of writing blind.
-  await ensurePartitionTable(ctx, { fix: false, table });
+  if (table) await ensurePartitionTable(ctx, { fix: false, table });
 
   const stage2 = await fetchStage2(ctx);
   const image = await buildCacheImage([], stage2);

@@ -9,6 +9,7 @@
 import type { UsbFilter } from "../transport/transport";
 import type { Device } from "../engine/types";
 import { unlockFlow } from "../flow/unlock";
+import { TC8_TABLE } from "../flow/partitions";
 import { reinstallLinuxFlow } from "../flow/reinstall-linux";
 import { configureFlow } from "../flow/configure";
 import { updateBootloaderFlow } from "../flow/update-bootloader";
@@ -45,13 +46,14 @@ export function tc8Profile(): Device {
     filters: TC8_FILTERS,
     flows: [
       unlockFlow(),
-      reinstallLinuxFlow(),
+      reinstallLinuxFlow(undefined, { install: { table: TC8_TABLE } }),
       // Application picker first, then device + access. No Wi-Fi radio on the
       // TC8 — skip the Network settings page.
       configureFlow({
+        table: TC8_TABLE,
         sections: [applicationSection(applicationsFor("tc8")), DEVICE_SETTINGS, ACCESS_SETTINGS],
       }),
-      updateBootloaderFlow(),
+      updateBootloaderFlow(TC8_TABLE),
     ],
   };
 }

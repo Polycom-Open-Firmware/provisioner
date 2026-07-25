@@ -14,7 +14,7 @@ import {
   configFieldsToLines,
   configStore,
 } from "../config/blob";
-import { TC8_TABLE, ensurePartitionTable } from "./partitions";
+import { ensurePartitionTable, type TableSpec } from "./partitions";
 import { settingsSteps, type SettingsSection } from "./settings";
 
 const SLOT = "a"; // "replace stock": overwrite boot_a/dtbo_a/vbmeta_a + the rootfs
@@ -22,6 +22,12 @@ const SLOT = "a"; // "replace stock": overwrite boot_a/dtbo_a/vbmeta_a + the roo
 interface InstallOptions {
   /** C60 only: persist the SDP-loaded open U-Boot into the eMMC boot area. */
   replaceBootloader?: boolean;
+  /** The device's GPT contract. A TableSpec enables the name-probe + repair
+   *  path with that device's restore image. `null` = the device installs via
+   *  a manifest raw partition map only — no name-probe, and a manifest
+   *  without a raw map is refused outright. Omitted = no repair capability
+   *  (probe against the manifest's own gptRestore only). */
+  table?: TableSpec | null;
 }
 
 interface RawPartitionSpec {
@@ -103,20 +109,31 @@ async function runFlash(ctx: FlowContext, opts: InstallOptions = {}): Promise<vo
     }
   }
 
-  if (hasRawInstallMap && man.gptRestore === null) {
+  if (opts?.table === null) {
+    // Raw-map-only device (C60): the GPT-name probe is unreliable on its
+    // fastboot and no repair image exists for it, so a manifest without a
+    // complete raw partition map is refused rather than name-probed — a
+    // TC8-shaped manifest selected by mistake must not get near this disk.
+    if (!hasRawInstallMap)
+      throw new Error(
+        "This device installs via the manifest's raw partition map, and the selected " +
+          "build has none — wrong or incomplete artifact set for this device.",
+      );
+    ctx.log("using manifest raw partition map; skipping GPT-name probe.");
+  } else if (hasRawInstallMap && man.gptRestore === null) {
     ctx.log("using manifest raw partition map; skipping GPT-name probe.");
   } else {
     // Repair the partition table first if it's been nuked — no serial, no brick.
-    // What "intact" means comes from the manifest: `gptRestore` absent = a TC8-era
-    // manifest (default TC8 restore image); null = no restore image exists (C60 —
-    // the stock table is assumed intact); an object names the image.
+    // The restore image comes from the manifest (`gptRestore` names it;
+    // null = none exists); a manifest without the key falls back to the
+    // device profile's table.
     await ensurePartitionTable(ctx, {
       fix: true,
       table: {
         required: [rootfsTarget, "boot_" + SLOT],
         restore:
           man.gptRestore === undefined
-            ? TC8_TABLE.restore
+            ? (opts?.table?.restore ?? null)
             : man.gptRestore
               ? { image: man.gptRestore.url, diskSectors: man.gptRestore.diskSectors }
               : null,

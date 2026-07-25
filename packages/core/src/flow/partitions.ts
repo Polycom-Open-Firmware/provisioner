@@ -19,7 +19,8 @@ export interface TableSpec {
   restore: { image: string; diskSectors: number } | null;
 }
 
-/** The TC8 table — also the default, so pre-manifest callers keep working. */
+/** The TC8 table. Callers pass their device's table explicitly — a TC8
+ *  repair applied to another device destroys its GPT. */
 export const TC8_TABLE: TableSpec = {
   required: ["userdata", "boot_a"],
   // Whole user-area eMMC (mmcblk2): 15267840 KiB = 30535680 sectors.
@@ -50,9 +51,9 @@ async function tableOk(ctx: FlowContext, required: string[]): Promise<boolean> {
  */
 export async function ensurePartitionTable(
   ctx: FlowContext,
-  opts: { fix: boolean; table?: TableSpec },
+  opts: { fix: boolean; table: TableSpec },
 ): Promise<void> {
-  const table = opts.table ?? TC8_TABLE;
+  const table = opts.table;
   ctx.log("checking the partition table…");
   if (await tableOk(ctx, table.required)) {
     ctx.log("partition table OK.");

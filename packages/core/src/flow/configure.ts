@@ -59,7 +59,8 @@ async function runApply(ctx: FlowContext, opts: ConfigureOptions = {}): Promise<
 
   // Don't touch the filesystem if the partition table is borked — refuse and tell
   // the operator to run an install (which repairs it). We do NOT fix here.
-  if (!opts.rawConfig) await ensurePartitionTable(ctx, { fix: false, table: opts.table });
+  if (!opts.rawConfig && opts.table)
+    await ensurePartitionTable(ctx, { fix: false, table: opts.table });
 
   // Build the blob from the operator's draft. Blank fields are skipped, so the
   // device keeps its current value for anything left empty.

@@ -124,7 +124,7 @@ export function c60UnlockFlow(): Flow {
           "so the device reboots straight into Linux when the install finishes.",
         {
           connectImage: "/c60/usb-connect.svg",
-          install: { replaceBootloader: true },
+          install: { replaceBootloader: true, table: null },
           danger: C60_INSTALL_DANGER,
         },
       ),
@@ -150,7 +150,7 @@ function c60InstallFlow(): Flow {
           "both BOOT_MODE switches to OFF and use Unlock and Install instead.",
         {
           connectImage: "/c60/usb-connect.svg",
-          install: { replaceBootloader: true },
+          install: { replaceBootloader: true, table: null },
           danger: C60_INSTALL_DANGER,
         },
       ),
