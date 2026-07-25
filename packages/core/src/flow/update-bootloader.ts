@@ -38,7 +38,7 @@ async function runUpdate(ctx: FlowContext, table?: TableSpec): Promise<void> {
   ctx.log("device: " + (id["product"] ?? "?") + "   serial=" + (id["serialno"] ?? "?"));
   const info = (m: string) => { try { console.info("[fastboot] " + m); } catch { /* no console */ } };
 
-  // Same GPT guard as Configure: a borked table means no cache partition to
+  // Same GPT guard as Configure: an invalid table means no cache partition to
   // stage into — send the operator to an install instead of writing blind.
   await ensurePartitionTable(ctx, { fix: false, table });
 
